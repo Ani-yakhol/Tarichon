@@ -1,0 +1,198 @@
+<Window x:Class="HebrewTaskbarWidget.ZmanimPopup"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:HebrewTaskbarWidget.Controls"
+        Title="זמני היום ההלכתיים"
+        FlowDirection="RightToLeft"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        Topmost="True"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="Manual"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        Deactivated="ZmanimPopup_Deactivated">
+
+    <Window.Resources>
+        <!-- צבעי ערכת נושא של לוח הזמנים - ברירת המחדל כאן היא כהה (התצוגה
+             ההיסטורית של הפופ-אפ); הכפתור שמש/ירח שליד סמל ההגדרות מחליף
+             את כל הצבעים בפועל (ראו ApplyTheme ב-ZmanimPopup.xaml.cs), כולל
+             את הצבעים שבורר התאריך העברי (HebrewCalendarPicker) צורך
+             (מפתחות Cal*) - כדי שהעיצוב יישאר עקבי גם שם. -->
+        <SolidColorBrush x:Key="PopupBackgroundBrush" Color="#F0202225" />
+        <SolidColorBrush x:Key="PopupBorderBrush" Color="#33FFFFFF" />
+        <SolidColorBrush x:Key="PopupPrimaryTextBrush" Color="White" />
+        <SolidColorBrush x:Key="PopupSecondaryTextBrush" Color="#CFCFCF" />
+        <SolidColorBrush x:Key="PopupTertiaryTextBrush" Color="#8F8F8F" />
+        <SolidColorBrush x:Key="PopupMutedTextBrush" Color="#7A7A7A" />
+        <SolidColorBrush x:Key="PopupSeparatorBrush" Color="#33FFFFFF" />
+        <SolidColorBrush x:Key="PopupButtonHoverBrush" Color="#33FFFFFF" />
+        <SolidColorBrush x:Key="PopupAccentBrush" Color="#9ECBFF" />
+        <SolidColorBrush x:Key="PopupAccentTextBrush" Color="#1B1C1F" />
+        <SolidColorBrush x:Key="PopupDatePickerHostBrush" Color="#141517" />
+
+        <SolidColorBrush x:Key="CalPrimaryTextBrush" Color="White" />
+        <SolidColorBrush x:Key="CalSecondaryTextBrush" Color="#8F8F8F" />
+        <SolidColorBrush x:Key="CalHoverBrush" Color="#33FFFFFF" />
+        <SolidColorBrush x:Key="CalAccentBrush" Color="#9ECBFF" />
+        <SolidColorBrush x:Key="CalAccentTextBrush" Color="#1B1C1F" />
+
+        <Style x:Key="NavButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource PopupPrimaryTextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="14">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PopupButtonHoverBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="IconButtonStyle" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+    </Window.Resources>
+
+    <Border Background="{DynamicResource PopupBackgroundBrush}"
+            CornerRadius="10"
+            BorderBrush="{DynamicResource PopupBorderBrush}"
+            BorderThickness="1"
+            Padding="14,12">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.4" Color="Black" />
+        </Border.Effect>
+
+        <StackPanel Width="270">
+
+            <!-- שורת כותרת: ניווט בין ימים (ימין=אחורה, שמאל=קדימה) -->
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- ימין: יום קודם (אחורה) - חץ "<" -->
+                <Button Grid.Column="0" x:Name="PrevDayButton" Style="{StaticResource NavButtonStyle}"
+                        Content="&#8249;" Click="PrevDayButton_Click" ToolTip="יום קודם" />
+
+                <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                    <TextBlock x:Name="DayHeaderText" HorizontalAlignment="Center" TextAlignment="Center"
+                               Foreground="{DynamicResource PopupPrimaryTextBrush}" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock x:Name="ParashaHeaderText" HorizontalAlignment="Center" TextAlignment="Center"
+                               Foreground="{DynamicResource PopupPrimaryTextBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,1,0,0" />
+
+                    <Grid Margin="0,2,0,0" HorizontalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <!-- ימין: תאריך עברי -->
+                        <TextBlock Grid.Column="0" x:Name="HebrewDateHeaderText" TextAlignment="Center"
+                                   Foreground="{DynamicResource PopupSecondaryTextBrush}" FontSize="12" />
+                        <TextBlock Grid.Column="1" x:Name="GregorianDateHeaderText" TextAlignment="Center" Margin="6,0,0,0"
+                                   Foreground="{DynamicResource PopupTertiaryTextBrush}" FontSize="10.5" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <TextBlock x:Name="HolidayHeaderText" HorizontalAlignment="Center" TextAlignment="Center"
+                               Foreground="{DynamicResource PopupAccentBrush}" FontSize="10.5" Margin="0,2,0,0" Visibility="Collapsed" />
+                </StackPanel>
+
+                <!-- שמאל: יום הבא (קדימה) - חץ ">" -->
+                <Button Grid.Column="2" x:Name="NextDayButton" Style="{StaticResource NavButtonStyle}"
+                        Content="&#8250;" Click="NextDayButton_Click" ToolTip="יום הבא" />
+            </Grid>
+
+            <!-- שורת פעולות: היום (צמוד לימין), בחירת תאריך, ערכת נושא, הגדרות -->
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0" x:Name="TodayButton" HorizontalAlignment="Right"
+                        Background="Transparent" BorderThickness="0" Foreground="{DynamicResource PopupAccentBrush}"
+                        Content="חזרה להיום" Cursor="Hand" Click="TodayButton_Click" FontSize="11.5"
+                        Visibility="Collapsed" />
+
+                <Button Grid.Column="1" x:Name="DatePickerButton" Style="{StaticResource IconButtonStyle}"
+                        Content="&#128197;" Click="DatePickerButton_Click" ToolTip="בחירת תאריך" Margin="4,0,0,0" />
+
+                <!-- מיד מימין לסמל ההגדרות: כפתור החלפת ערכת נושא (שמש = עבור למצב בהיר, ירח = עבור למצב כהה) -->
+                <Button Grid.Column="2" x:Name="ThemeToggleButton" Style="{StaticResource IconButtonStyle}"
+                        Click="ThemeToggleButton_Click" Margin="4,0,0,0" />
+
+                <Button Grid.Column="3" x:Name="SettingsButton" Style="{StaticResource IconButtonStyle}"
+                        Content="&#9881;" Click="SettingsButton_Click" ToolTip="הגדרות" Margin="4,0,0,0" />
+            </Grid>
+
+            <!-- בורר תאריך עברי - מוסתר כברירת מחדל, נפתח בלחיצה על כפתור היומן -->
+            <Border x:Name="DatePickerHost" Visibility="Collapsed" Background="{DynamicResource PopupDatePickerHostBrush}"
+                    CornerRadius="6" Margin="0,0,0,8" Padding="6">
+                <controls:HebrewCalendarPicker x:Name="HebrewDatePicker" DateSelected="HebrewDatePicker_DateSelected" />
+            </Border>
+
+            <Separator Margin="0,0,0,6" Background="{DynamicResource PopupSeparatorBrush}" />
+
+            <!-- רשימת הזמנים - הזמן הקרוב ביותר (אם היום הנבחר הוא היום בפועל) מודגש בצבע ההדגשה -->
+            <ItemsControl x:Name="ZmanimList">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12.5" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource PopupSecondaryTextBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsNext}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource PopupAccentBrush}" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Grid.Column="1" Text="{Binding DisplayTime}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource PopupPrimaryTextBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsNext}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource PopupAccentBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="הזמנים משוערים לפי חישוב אסטרונומי; לשימוש הלכתי למעשה יש להיוועץ ברב מוסמך."
+                       Foreground="{DynamicResource PopupMutedTextBrush}" FontSize="9.5" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,0" />
+        </StackPanel>
+    </Border>
+</Window>

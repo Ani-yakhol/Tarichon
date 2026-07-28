@@ -1,0 +1,916 @@
+<Window x:Class="HebrewTaskbarWidget.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:HebrewTaskbarWidget.Controls"
+        Title="הגדרות - תאריכון"
+        Icon="Assets/app.ico"
+        FlowDirection="RightToLeft"
+        Width="480" Height="660"
+        MinWidth="420" MinHeight="480"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource PrimaryForegroundBrush}"
+        FontFamily="Segoe UI"
+        ShowInTaskbar="True">
+
+    <Window.Resources>
+        <!-- צבעי ערכת נושא: כל הערכים כאן הם ברירת המחדל (מצב בהיר).
+             מוחלפים בפועל (ראו ApplyPanelTheme ב-SettingsWindow.xaml.cs) אם
+             המשתמש הפעיל "רקע כהה לפאנל ההגדרות". שימוש ב-DynamicResource
+             בכל מקום למטה (ולא StaticResource/צבעים קבועים) הוא מה שמאפשר
+             להחליף את הכל בבת אחת, כולל תצוגה חיה בזמן החלפה. -->
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F3F3F3" />
+        <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#1B1C1F" />
+        <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#5B5D63" />
+        <SolidColorBrush x:Key="AccentForegroundBrush" Color="#1A5FB4" />
+        <SolidColorBrush x:Key="ControlBackgroundBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="ControlBorderBrush" Color="#C6C6C9" />
+        <SolidColorBrush x:Key="TabItemBackgroundBrush" Color="#E3E3E6" />
+        <SolidColorBrush x:Key="TabItemForegroundBrush" Color="#3A3B40" />
+        <SolidColorBrush x:Key="TabItemSelectedBackgroundBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="TabItemSelectedForegroundBrush" Color="#1B1C1F" />
+        <SolidColorBrush x:Key="CheckBoxBoxBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="CheckBoxBorderBrush" Color="#8A8B90" />
+        <SolidColorBrush x:Key="CheckMarkBrush" Color="#1A5FB4" />
+
+        <Style TargetType="TabItem">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Foreground" Value="{DynamicResource TabItemForegroundBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <!-- תבנית מלאה משלנו (ולא הכרום המובנה של Windows) - כדי
+                             לשלוט בוודאות בניגודיות בין רקע התווית לצבע הטקסט
+                             שלה, בשני מצבי הערכה (בהיר/כהה) ובשני מצבי הבחירה. -->
+                        <Border x:Name="TabBorder"
+                                Background="{DynamicResource TabItemBackgroundBrush}"
+                                BorderBrush="{DynamicResource ControlBorderBrush}"
+                                BorderThickness="1,1,1,0"
+                                CornerRadius="4,4,0,0"
+                                Margin="2,0,0,0"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter x:Name="TabContent"
+                                               ContentSource="Header"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource TabItemSelectedBackgroundBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TabItemSelectedForegroundBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}" />
+            <Setter Property="Margin" Value="0,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <!-- תבנית מלאה משלנו כדי לשלוט בכיוון סימן ה-V: הריבוע
+                             וההצמדה שלו לטקסט ממשיכים "להתהפך" אוטומטית לפי
+                             כיווניות RTL (בדיוק כמו קודם - הריבוע מופיע מימין
+                             לטקסט, כמצופה בעברית), אבל לסימן ה-V עצמו (Path)
+                             יש FlowDirection="LeftToRight" מפורש - כדי שהוא
+                             תמיד יישאר בצורתו הטבעית (הקו הגבוה בצדו הימני),
+                             ולא "יתהפך" יחד עם שאר הפריסה. -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border x:Name="Box" Width="16" Height="16" VerticalAlignment="Center"
+                                    Background="{DynamicResource CheckBoxBoxBrush}"
+                                    BorderBrush="{DynamicResource CheckBoxBorderBrush}"
+                                    BorderThickness="1.3" CornerRadius="3">
+                                <Path x:Name="CheckMark"
+                                      FlowDirection="LeftToRight"
+                                      Data="M 1,5.2 L 5.1,9.3 L 13,1"
+                                      Stroke="{DynamicResource CheckMarkBrush}"
+                                      StrokeThickness="2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      Margin="1.5"
+                                      Visibility="Collapsed" />
+                            </Border>
+                            <ContentPresenter Margin="6,0,0,0" VerticalAlignment="Center"
+                                               TextElement.Foreground="{TemplateBinding Foreground}"
+                                               RecognizesAccessKey="True" />
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}" />
+            <Setter Property="Margin" Value="0,3" />
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}" />
+        </Style>
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Margin" Value="0,14,0,4" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+        </Style>
+        <!-- שורת טקסט הסבר מתחת לכל סעיף - היה קודם משוכפל (Foreground="#8F8F8F"
+             FontSize="10.5") בכל מקום בנפרד; עכשיו סגנון משותף אחד, תלוי ערכת
+             נושא, כדי שגם הוא יישאר קריא בבירור בכל מצב. -->
+        <Style x:Key="DescriptionText" TargetType="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="Margin" Value="0,2" />
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Margin" Value="0,2" />
+        </Style>
+        <Style TargetType="DatePicker">
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}" />
+        </Style>
+
+        <!-- כפתורי הפעולה הראשיים (שמור/ביטול/שחזור ברירות מחדל/יציאה) -
+             מעוגלים ומודרניים, תואמים לעיצוב חלוניות ההודעה. -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="MinWidth" Value="90" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="7" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.7" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="{DynamicResource AccentForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentForegroundBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- מקבילות ל-2 הסגנונות למעלה, אך עבור ToggleButton (ToggleButton
+             ו-Button הם סוגי-אח נפרדים תחת ButtonBase - לא ניתן להשתמש
+             באותו Style על שניהם) - למשל כפתור "נסוי" בעורך ההתראה. -->
+        <Style x:Key="ToggleActionButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="MinWidth" Value="90" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd" CornerRadius="7" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.7" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentForegroundBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentForegroundBrush}" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- אייקוני פעולה קטנים ומעוגלים (הפעלה/כיבוי, עריכה, מחיקה) שמופיעים
+             על כל שורת התראה מתקדמת שנוספה. -->
+        <Style x:Key="IconActionButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="3,0,0,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.8" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.65" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- מתג הפעלה/כיבוי מעוצב (מסלול + כדור נע), במקום CheckBox רגיל -
+             למשל "בדוק עדכונים". תמיד עם הטקסט לפני המתג (מימין, ב-RTL),
+             והמתג עצמו אחריו (משמאל). -->
+        <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal">
+                            <ContentPresenter VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <Border x:Name="SwitchTrack" Width="34" Height="18" CornerRadius="9"
+                                    Background="{DynamicResource ControlBorderBrush}" VerticalAlignment="Center">
+                                <Border x:Name="SwitchThumb" Width="14" Height="14" CornerRadius="7"
+                                        Background="White" HorizontalAlignment="Left" Margin="2,0,0,0" />
+                            </Border>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource AccentForegroundBrush}" />
+                                <Setter TargetName="SwitchThumb" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="SwitchThumb" Property="Margin" Value="0,0,2,0" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.85" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- פס התקדמות מעוגל (הורדת עדכון) - תואם לעיצוב שאר התוכנה. -->
+        <Style x:Key="RoundedProgressBarStyle" TargetType="ProgressBar">
+            <Setter Property="Background" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Border CornerRadius="7" Background="{TemplateBinding Background}" ClipToBounds="True">
+                            <Grid HorizontalAlignment="Left">
+                                <Border x:Name="PART_Track" CornerRadius="7" Background="{TemplateBinding Background}" />
+                                <Border x:Name="PART_Indicator" CornerRadius="7" Background="{TemplateBinding Foreground}" HorizontalAlignment="Left" />
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- פס גלילה מודרני: דק, קצוות מעוגלים גם למסלול וגם לחלק הנע (Thumb),
+             ללא כפתורי חצים בקצוות (כמו רוב הדפדפנים/אפליקציות המודרניות). -->
+        <SolidColorBrush x:Key="ScrollThumbBrush" Color="#8A8B90" />
+        <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#5B5D63" />
+        <SolidColorBrush x:Key="ScrollTrackBrush" Color="#00000000" />
+
+        <Style x:Key="ModernScrollThumb" TargetType="Thumb">
+            <Setter Property="Background" Value="{DynamicResource ScrollThumbBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Margin="1" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="MinWidth" Value="8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="{TemplateBinding Background}">
+                            <Border CornerRadius="4" Background="{DynamicResource ScrollTrackBrush}" />
+                            <Track x:Name="PART_Track" IsDirectionReversed="True" Width="8">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False" />
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ModernScrollThumb}" MinHeight="30" />
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel Margin="14">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,12,0,0">
+            <Button x:Name="SaveButton" Content="שמור" Style="{StaticResource PrimaryActionButtonStyle}" Click="SaveButton_Click" />
+            <Button x:Name="CancelButton" Content="ביטול" Style="{StaticResource ActionButtonStyle}" Click="CancelButton_Click" />
+            <Button x:Name="RestoreDefaultsButton" Content="שחזור ברירות מחדל" Style="{StaticResource ActionButtonStyle}" Click="RestoreDefaultsButton_Click" />
+            <Button x:Name="ExitApplicationButton" Content="יציאה" Style="{StaticResource ActionButtonStyle}" Margin="8,0,0,0" Click="ExitApplicationButton_Click" />
+        </StackPanel>
+
+        <TabControl x:Name="MainTabControl" Background="{DynamicResource WindowBackgroundBrush}" BorderThickness="0">
+
+            <!-- טאב 1: כללי - כרגע מכיל רק את מראה פאנל ההגדרות עצמו; בעתיד
+                 יתווספו כאן פונקציות נוספות (שפה ועוד). -->
+
+            <!-- טאב 2: הוידג'ט בשורת המשימות -->
+            <TabItem Header="הוידג'ט">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="מיקום הוידג'ט בשורת המשימות" Margin="0,0,0,4" />
+                        <RadioButton x:Name="PositionChevronRadio" GroupName="PositionMode" Content="צמוד לחץ ה-^ (הצג סמלים מוסתרים) - ברירת מחדל" Checked="PositionMode_Changed" />
+                        <RadioButton x:Name="PositionCustomEdgeRadio" GroupName="PositionMode" Content="בתוך שורת המשימות, במרחק מותאם אישית מקצה (בפיקסלים)" Checked="PositionMode_Changed" />
+
+                        <!-- מוצג רק במצב "בתוך שורת המשימות, במרחק מותאם אישית מקצה" -->
+                        <StackPanel x:Name="CustomEdgeOffsetPanel" Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <ComboBox x:Name="CustomOffsetSideComboBox" Width="115" SelectionChanged="CustomOffsetSideComboBox_SelectionChanged">
+                                    <ComboBoxItem Content="מהקצה הימני" />
+                                    <ComboBoxItem Content="מהקצה השמאלי" />
+                                </ComboBox>
+                                <TextBlock Text="מרחק מקצה:" VerticalAlignment="Center" Margin="10,0,0,0" />
+                                <TextBox x:Name="CustomOffsetPixelsTextBox" Width="60" Margin="6,0,0,0" HorizontalAlignment="Left" TextAlignment="Center" TextChanged="CustomOffsetPixelsTextBox_TextChanged" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource DescriptionText}" Margin="0,8,0,0"
+                                   Text="ניתן לגרור את הוידג'ט למיקום הרצוי (Ctrl + גרירת עכבר)." />
+                        <CheckBox x:Name="LockWidgetPositionCheckBox" Content="נעל מיקום" Margin="0,4,0,0" />
+
+                        <TextBlock Text="תצוגת התאריך/שעה המקורית של Windows" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource AccentForegroundBrush}" Margin="0,14,0,4" />
+                        <CheckBox x:Name="HideWindowsClockCheckBox" Content="הסתר את תצוגת התאריך/שעה המקורית" Checked="HideWindowsClockCheckBox_CheckedChanged" Unchecked="HideWindowsClockCheckBox_CheckedChanged" />
+
+                        <StackPanel x:Name="ReduceGapPanel" Margin="0,4,0,0">
+                            <CheckBox x:Name="ReduceGapCheckBox" Content="צמצם גם את הרווח הריק (מפעיל מחדש את Explorer)"
+                                      Checked="ReduceGapCheckBox_CheckedChanged" Unchecked="ReduceGapCheckBox_CheckedChanged" />
+                            <CheckBox x:Name="AutoRestartExplorerOnLaunchCheckBox" Content="הפעל אוטומטית את Explorer בהפעלת התוכנה מחדש" Margin="0,4,0,0" />
+                        </StackPanel>
+
+                        <TextBlock Text="שעון/תאריך לועזי בתוך הוידג'ט" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource AccentForegroundBrush}" Margin="0,14,0,4" />
+                        <CheckBox x:Name="ShowGregorianClockCheckBox" Content="הצג שעון/תאריך לועזי בתוך הוידג'ט" Checked="ShowGregorianClockCheckBox_CheckedChanged" Unchecked="ShowGregorianClockCheckBox_CheckedChanged" />
+                        <StackPanel x:Name="GregorianClockSidePanel" Margin="18,4,0,0">
+                            <TextBlock Text="מיקום ביחס לתאריך העברי:" FontSize="11" Margin="0,0,0,2" />
+                            <RadioButton x:Name="GregorianSideRightRadio" GroupName="GregorianSide" Content="מימין לתאריך העברי" />
+                            <RadioButton x:Name="GregorianSideLeftRadio" GroupName="GregorianSide" Content="משמאל לתאריך העברי" />
+                            <CheckBox x:Name="ShowGregorianSeparatorCheckBox" Content="הצג קו מפריד בין העברי ללועזי" Margin="0,6,0,0" />
+                            <CheckBox x:Name="OpenWindowsCalendarOnGregorianClickCheckBox" Content="פתח לוח שנה מובנה מחלק התאריך הלועזי" Margin="0,6,0,0" />
+                            <TextBlock Style="{StaticResource DescriptionText}" Margin="18,2,0,0"
+                                       Text="עובד רק אם תצוגת התאריך/שעה המקורית של Windows אינה מוסתרת (ראו ההגדרה 'הסתר את תצוגת התאריך/שעה המקורית' למטה)." />
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="חג ומועד בתוך הוידג'ט" />
+                        <TextBlock Style="{StaticResource DescriptionText}"
+                                   Text="מוסיף לוידג'ט חלק נוסף שמציג את שם החג/המועד - מוצג רק בימים שיש בהם חג או מועד, ונעלם בשאר הימים. כבוי כברירת מחדל." />
+                        <CheckBox x:Name="ShowHolidayPanelCheckBox" Content="הצג חג ומועד בתוך הוידג'ט" Checked="ShowHolidayPanelCheckBox_CheckedChanged" Unchecked="ShowHolidayPanelCheckBox_CheckedChanged" />
+                        <StackPanel x:Name="HolidayPanelSidePanel" Margin="18,4,0,0">
+                            <TextBlock Text="מיקום בתוך הוידג'ט:" FontSize="11" Margin="0,0,0,2" />
+                            <RadioButton x:Name="HolidaySideRightRadio" GroupName="HolidaySide" Content="בצד הימני ביותר" />
+                            <RadioButton x:Name="HolidaySideLeftRadio" GroupName="HolidaySide" Content="בצד השמאלי ביותר" />
+                            <RadioButton x:Name="HolidaySideBetweenRadio" GroupName="HolidaySide" Content="בין העברי ללועזי" />
+                            <CheckBox x:Name="ShowHolidaySeparatorCheckBox" Content="הצג קו מפריד לצד חלק החג" Margin="0,6,0,0" />
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="שורות מוצגות" />
+                        <CheckBox x:Name="ShowTopLineCheckBox" Content="הצג יום בשבוע ופרשת השבוע" />
+                        <CheckBox x:Name="ShowBottomLineCheckBox" Content="הצג תאריך עברי מלא" />
+                        <CheckBox x:Name="SwapLineOrderCheckBox" Content="הפוך את סדר השורות" />
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="גופן וצבע טקסט" />
+                        <CheckBox x:Name="UseCustomFontCheckBox" Content="גופן וגודל מותאמים אישית (במקום חיקוי השעון של Windows)" Checked="UseCustomFontCheckBox_CheckedChanged" Unchecked="UseCustomFontCheckBox_CheckedChanged" />
+                        <Grid Margin="18,2,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="70" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="FontFamilyTextBox" Grid.Column="0" Margin="0,0,6,0" />
+                            <TextBox x:Name="FontSizeTextBox" Grid.Column="1" />
+                        </Grid>
+
+                        <CheckBox x:Name="UseCustomColorCheckBox" Content="צבע טקסט מותאם אישית (במקום התאמה אוטומטית לערכת הנושא)" Margin="0,10,0,4" Checked="UseCustomColorCheckBox_CheckedChanged" Unchecked="UseCustomColorCheckBox_CheckedChanged" />
+                        <controls:ColorPickerControl x:Name="TextColorPicker" Margin="18,0,0,0" />
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="רקע קוביית הוידג'ט" />
+                        <TextBlock Style="{StaticResource DescriptionText}"
+                                   Text="כברירת מחדל הוידג'ט שקוף לגמרי ומוצג רק הטקסט (כמו שורת המשימות עצמה). ניתן להגדיר כאן צבע רקע לקוביה כולה, כולל רמת שקיפות." />
+                        <CheckBox x:Name="UseCustomBackgroundCheckBox" Content="צבע רקע מותאם אישית לקוביית הוידג'ט" Checked="UseCustomBackgroundCheckBox_CheckedChanged" Unchecked="UseCustomBackgroundCheckBox_CheckedChanged" />
+                        <controls:ColorPickerControl x:Name="BackgroundColorPicker" Margin="18,0,0,0" />
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="קו מתאר לקוביית הוידג'ט" />
+                        <TextBlock Style="{StaticResource DescriptionText}"
+                                   Text="מוסיף מסגרת דקה סביב קוביית הוידג'ט כולה - שימושי בעיקר כשהרקע שקוף או בהיר, כדי להבליט את הוידג'ט מול שולחן העבודה/שורת המשימות שמאחוריו." />
+                        <CheckBox x:Name="UseWidgetBorderCheckBox" Content="הצג קו מתאר לקוביית הוידג'ט"
+                                  Checked="UseWidgetBorderCheckBox_CheckedChanged" Unchecked="UseWidgetBorderCheckBox_CheckedChanged" />
+                        <controls:ColorPickerControl x:Name="WidgetBorderColorPicker" Margin="18,0,0,0" />
+                        <TextBlock Text="עובי קו המתאר (בפיקסלים):" Margin="18,6,0,2" />
+                        <TextBox x:Name="WidgetBorderThicknessTextBox" Width="80" HorizontalAlignment="Right" Margin="18,0,0,0" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- טאב 3: מיקום וזמני היום -->
+            <TabItem Header="מיקום וזמנים">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="תאריך ושעה" Margin="0,0,0,4" />
+                        <TextBlock Style="{StaticResource DescriptionText}"
+                                   Text="ההגדרות כאן משפיעות על כל התוכנה: הוידג'ט, התצוגה מעל שולחן העבודה, לוח הזמנים וההתראות." />
+                        <CheckBox x:Name="UseManualDateTimeCheckBox" Content="כיוון תאריך ושעה ידני (במקום התאריך/שעה של המחשב)"
+                                  Checked="UseManualDateTimeCheckBox_CheckedChanged" Unchecked="UseManualDateTimeCheckBox_CheckedChanged" />
+                        <StackPanel x:Name="ManualDateTimePanel" Margin="18,4,0,0">
+                            <TextBlock Style="{StaticResource DescriptionText}"
+                                       Text="הזמן ימשיך לזרום קדימה כרגיל החל מהתאריך/שעה שתגדירו כאן (וממשיך לתקתק - לא קופא במקום)." />
+                            <Grid Margin="0,2,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="תאריך" FontSize="11" />
+                                    <DatePicker x:Name="ManualDatePicker" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="שעה (24 שעות, HH:mm)" FontSize="11" />
+                                    <TextBox x:Name="ManualTimeTextBox" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="פורמט הצגת שעה" />
+                        <RadioButton x:Name="TimeFormat24Radio" GroupName="TimeFormat" Content="24 שעות (13:05)" />
+                        <RadioButton x:Name="TimeFormat12Radio" GroupName="TimeFormat" Content="12 שעות (1:05 PM)" />
+                        <CheckBox x:Name="ShowSecondsCheckBox" Content="הצג שניות (בוידג'ט ובתצוגת שולחן העבודה בלבד - לא בלוח הזמנים/בהתראות)" Margin="0,6,0,0" />
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="מיקום גיאוגרפי (לחישוב זריחה/שקיעה וזמני היום)" />
+                        <!-- הפריטים נטענים דינמית בקוד (SettingsWindow.xaml.cs) מתוך מערך
+                             LocationPresets - כדי לתמוך ברשימה גדולה של ערים (ישראל +
+                             חו"ל) בלי לשכפל את הרשימה גם כאן וגם בקוד. -->
+                        <ComboBox x:Name="LocationPresetComboBox" SelectionChanged="LocationPresetComboBox_SelectionChanged" />
+
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Grid.Column="0">
+                                <TextBlock Text="קו רוחב (Latitude)" FontSize="11" />
+                                <TextBox x:Name="LatitudeTextBox" IsEnabled="False" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="2">
+                                <TextBlock Text="קו אורך (Longitude)" FontSize="11" />
+                                <TextBox x:Name="LongitudeTextBox" IsEnabled="False" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,6,0,0">
+                                <TextBlock Text="גובה מעל פני הים (מ')" FontSize="11" />
+                                <TextBox x:Name="ElevationTextBox" IsEnabled="False" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,6,0,0">
+                                <TextBlock Text="אזור זמן (Windows Time Zone ID)" FontSize="11" />
+                                <TextBox x:Name="TimeZoneTextBox" IsEnabled="False" />
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Style="{StaticResource DescriptionText}" Margin="0,10,0,0"
+                                   Text="הזמנים משוערים לפי חישוב אסטרונומי; לשימוש הלכתי למעשה יש להיוועץ ברב מוסמך." />
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="מעבר בין ימים בתאריך העברי" Margin="0,16,0,4" />
+                        <TextBlock Style="{StaticResource DescriptionText}"
+                                   Text="קובע מתי היום העברי המוצג (בוידג'ט ובתצוגת שולחן העבודה) מתקדם ליום הבא. משפיע רק על התצוגה - חישוב זמני היום עצמם תמיד נשאר לפי היום הלועזי/האסטרונומי בפועל." />
+                        <RadioButton x:Name="HebrewDayChangeMidnightRadio" GroupName="HebrewDayChangeMode" Content="בחצות הלילה (00:00) - ברירת המחדל" />
+                        <RadioButton x:Name="HebrewDayChangeSunsetRadio" GroupName="HebrewDayChangeMode" Content="עם שקיעת החמה" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- טאב 4: התראות -->
+            <TabItem Header="התראות">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
+                    <StackPanel>
+                        <CheckBox x:Name="NotificationsEnabledCheckBox" Content="הפעל התראות על זמני היום" Checked="NotificationsEnabledCheckBox_CheckedChanged" Unchecked="NotificationsEnabledCheckBox_CheckedChanged" />
+
+                        <StackPanel x:Name="NotificationsDetailsPanel" Margin="0,8,0,0">
+
+                            <TextBlock Style="{StaticResource SectionHeader}" Text="מה להציג (הגדרה כללית)" Margin="0,0,0,4" />
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox x:Name="NotificationShowPopupCheckBox" Content="הודעה צפה" Checked="NotificationShowPopupCheckBox_CheckedChanged" Unchecked="NotificationShowPopupCheckBox_CheckedChanged" VerticalAlignment="Center" />
+                                <TextBlock Text="," VerticalAlignment="Center" Margin="2,0,0,0" />
+                                <StackPanel x:Name="NotificationToastDurationPanel" Orientation="Horizontal" Margin="4,0,0,0">
+                                    <TextBlock Text="משך תצוגה (בשניות):" VerticalAlignment="Center" />
+                                    <TextBox x:Name="NotificationToastDurationTextBox" Width="50" Margin="6,0,0,0" TextAlignment="Center" VerticalAlignment="Center" />
+                                    <TextBlock Text="רקע:" VerticalAlignment="Center" Margin="12,0,0,0" />
+                                    <ComboBox x:Name="NotificationToastBackgroundComboBox" Width="70" Margin="6,0,0,0" VerticalAlignment="Center">
+                                        <ComboBoxItem Content="כהה" />
+                                        <ComboBoxItem Content="בהיר" />
+                                    </ComboBox>
+                                </StackPanel>
+                            </StackPanel>
+                            <CheckBox x:Name="NotificationPlaySoundCheckBox" Content="התראה קולית" Checked="NotificationPlaySoundCheckBox_CheckedChanged" Unchecked="NotificationPlaySoundCheckBox_CheckedChanged" />
+
+                            <StackPanel x:Name="NotificationSoundDetailsPanel" Margin="18,4,0,0">
+                                <TextBlock Text="סוג ההתראה הקולית" FontSize="11" Margin="0,0,0,2" />
+                                <ComboBox x:Name="NotificationSoundSourceComboBox" Margin="0,0,0,6" SelectionChanged="NotificationSoundSourceComboBox_SelectionChanged">
+                                    <ComboBoxItem Content="הקראה קולית" />
+                                    <ComboBoxItem Content="צליל קבוע מתוך רשימה" />
+                                    <ComboBoxItem Content="קובץ שמע מהמחשב" />
+                                </ComboBox>
+
+                                <StackPanel x:Name="NotificationVoiceDetailsPanel" Margin="18,2,0,6">
+                                    <TextBlock Text="קול" FontSize="11" />
+                                    <ComboBox x:Name="NotificationVoiceKitComboBox" DropDownOpened="NotificationVoiceKitComboBox_DropDownOpened" />
+                                </StackPanel>
+
+                                <StackPanel x:Name="NotificationFixedSoundDetailsPanel" Margin="18,2,0,6">
+                                    <ComboBox x:Name="NotificationFixedSoundComboBox">
+                                        <ComboBoxItem Content="צליל 1" />
+                                        <ComboBoxItem Content="צליל 2" />
+                                        <ComboBoxItem Content="צליל 3" />
+                                        <ComboBoxItem Content="צליל 4" />
+                                        <ComboBoxItem Content="צליל 5" />
+                                        <ComboBoxItem Content="צליל 6" />
+                                        <ComboBoxItem Content="צליל 7" />
+                                        <ComboBoxItem Content="צליל 8" />
+                                        <ComboBoxItem Content="צליל 9" />
+                                        <ComboBoxItem Content="צליל 10" />
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel x:Name="NotificationCustomSoundDetailsPanel" Margin="18,2,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="NotificationCustomSoundPathTextBox" Grid.Column="0" IsReadOnly="True" Margin="0,0,6,0" />
+                                        <Button x:Name="NotificationBrowseSoundButton" Grid.Column="1" Content="עיון..." Click="NotificationBrowseSoundButton_Click" Padding="10,2" />
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <TextBlock Style="{StaticResource SectionHeader}" Text="על אילו זמנים להתריע, וכמה זמן לפני" Margin="0,0,0,4" />
+                            <TextBlock Style="{StaticResource DescriptionText}" TextWrapping="Wrap"
+                                       Text="ניתן להזין 'זמן לפני' (בתבנית שעות:דקות, למשל 0:10) רק עבור זמן שמסומן. ניתן גם לבחור צליל מיוחד לזמן ספציפי - הוא יגבר על הצליל הכללי שלמעלה עבור הזמן הזה בלבד. כפתור 'נסוי' מציג את ההתראה בדיוק כפי שתיראה בזמן אמת." />
+                            <StackPanel x:Name="ZmanimRulesPanel" Margin="0,4,0,0" Grid.IsSharedSizeScope="True" />
+
+                            <!-- הגדרות מתקדמות: מתקפל, סגור כברירת מחדל - כמה התראות
+                                 עצמאיות במקביל על אותו זמן (למשל 40, 30 ו-5 דקות לפניו). -->
+                            <ToggleButton x:Name="NotificationsAdvancedToggle" Content="הגדרות מתקדמות ⌄" HorizontalAlignment="Center" Margin="0,16,0,0"
+                                          Background="Transparent" BorderThickness="0" Foreground="{DynamicResource AccentForegroundBrush}"
+                                          Cursor="Hand" Checked="NotificationsAdvancedToggle_CheckedChanged" Unchecked="NotificationsAdvancedToggle_CheckedChanged" />
+
+                            <StackPanel x:Name="NotificationsAdvancedPanel" Visibility="Collapsed" Margin="0,6,0,0">
+                                <TextBlock Style="{StaticResource DescriptionText}" TextWrapping="Wrap"
+                                           Text="תמיכה בכמה התראות במקביל על אותו זמן - למשל התראה 40 דקות לפני, עוד אחת 30 דקות לפני, ועוד אחת 5 דקות לפני אותו זמן עצמו. כל התראה כאן עצמאית לגמרי, עם תצוגה/צליל משלה." />
+
+                                <StackPanel x:Name="AdvancedNotificationRulesPanel" Margin="0,8,0,0" />
+
+                                <Button x:Name="AddAdvancedNotificationButton" Content="+ הוספת התראה חדשה" Style="{StaticResource ActionButtonStyle}" HorizontalAlignment="Right" Margin="0,8,0,0" Click="AddAdvancedNotificationButton_Click" />
+
+                                <!-- עורך התראה (משותף להוספה ולעריכה) - מוסתר כברירת מחדל -->
+                                <Border x:Name="AdvancedRuleEditorBorder" Visibility="Collapsed" Margin="0,10,0,0" Padding="10"
+                                        BorderThickness="1" BorderBrush="{DynamicResource ControlBorderBrush}" CornerRadius="4">
+                                    <StackPanel>
+                                        <TextBlock x:Name="AdvancedRuleEditorTitle" Text="התראה חדשה" FontWeight="SemiBold" Margin="0,0,0,6" />
+
+                                        <TextBlock Text="על איזה זמן" FontSize="11" />
+                                        <ComboBox x:Name="AdvancedRuleZmanComboBox" Margin="0,2,0,8" />
+
+                                        <TextBlock Text="זמן לפני (שעות:דקות)" FontSize="11" />
+                                        <TextBox x:Name="AdvancedRuleMinutesTextBox" Width="80" HorizontalAlignment="Right" Margin="0,2,0,8" TextAlignment="Center" ToolTip="למשל 0:10 או 1:15" />
+
+                                        <TextBlock Style="{StaticResource SectionHeader}" Text="מה תכלול ההתראה" Margin="0,0,0,4" />
+                                        <StackPanel Orientation="Horizontal">
+                                            <CheckBox x:Name="AdvancedRuleShowPopupCheckBox" Content="הודעה צפה" Checked="AdvancedRuleShowPopupCheckBox_CheckedChanged" Unchecked="AdvancedRuleShowPopupCheckBox_CheckedChanged" VerticalAlignment="Center" />
+                                            <TextBlock Text="," VerticalAlignment="Center" Margin="2,0,0,0" />
+                                            <StackPanel x:Name="AdvancedRuleToastDurationPanel" Orientation="Horizontal" Margin="4,0,0,0">
+                                                <TextBlock Text="משך תצוגה (בשניות):" VerticalAlignment="Center" />
+                                                <TextBox x:Name="AdvancedRuleToastDurationTextBox" Width="50" Margin="6,0,0,0" TextAlignment="Center" VerticalAlignment="Center" />
+                                                <TextBlock Text="רקע:" VerticalAlignment="Center" Margin="12,0,0,0" />
+                                                <ComboBox x:Name="AdvancedRuleToastBackgroundComboBox" Width="70" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                    <ComboBoxItem Content="כהה" />
+                                                    <ComboBoxItem Content="בהיר" />
+                                                </ComboBox>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <CheckBox x:Name="AdvancedRulePlaySoundCheckBox" Content="הקראה קולית" Margin="0,6,0,0" Checked="AdvancedRulePlaySoundCheckBox_CheckedChanged" Unchecked="AdvancedRulePlaySoundCheckBox_CheckedChanged" />
+
+                                        <StackPanel x:Name="AdvancedRuleSoundDetailsPanel" Margin="18,4,0,0">
+                                            <TextBlock Text="סוג ההתראה הקולית" FontSize="11" Margin="0,0,0,2" />
+                                            <ComboBox x:Name="AdvancedRuleSoundSourceComboBox" Margin="0,0,0,6" SelectionChanged="AdvancedRuleSoundSourceComboBox_SelectionChanged">
+                                                <ComboBoxItem Content="הקראה קולית" />
+                                                <ComboBoxItem Content="צליל קבוע מתוך רשימה" />
+                                                <ComboBoxItem Content="קובץ שמע מהמחשב" />
+                                            </ComboBox>
+
+                                            <StackPanel x:Name="AdvancedRuleVoiceDetailsPanel" Margin="18,2,0,6">
+                                                <TextBlock Text="קול" FontSize="11" />
+                                                <ComboBox x:Name="AdvancedRuleVoiceKitComboBox" DropDownOpened="AdvancedRuleVoiceKitComboBox_DropDownOpened" />
+                                            </StackPanel>
+
+                                            <StackPanel x:Name="AdvancedRuleFixedSoundDetailsPanel" Margin="18,2,0,6">
+                                                <ComboBox x:Name="AdvancedRuleFixedSoundComboBox">
+                                                    <ComboBoxItem Content="צליל 1" />
+                                                    <ComboBoxItem Content="צליל 2" />
+                                                    <ComboBoxItem Content="צליל 3" />
+                                                    <ComboBoxItem Content="צליל 4" />
+                                                    <ComboBoxItem Content="צליל 5" />
+                                                    <ComboBoxItem Content="צליל 6" />
+                                                    <ComboBoxItem Content="צליל 7" />
+                                                    <ComboBoxItem Content="צליל 8" />
+                                                    <ComboBoxItem Content="צליל 9" />
+                                                    <ComboBoxItem Content="צליל 10" />
+                                                </ComboBox>
+                                            </StackPanel>
+
+                                            <StackPanel x:Name="AdvancedRuleCustomSoundDetailsPanel" Margin="18,2,0,0">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox x:Name="AdvancedRuleCustomSoundPathTextBox" Grid.Column="0" IsReadOnly="True" Margin="0,0,6,0" />
+                                                    <Button x:Name="AdvancedRuleBrowseSoundButton" Grid.Column="1" Content="עיון..." Click="AdvancedRuleBrowseSoundButton_Click" Padding="10,2" />
+                                                </Grid>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <Grid Margin="0,10,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ToggleButton Grid.Column="0" x:Name="AdvancedRuleTestToggle" Content="נסוי" Style="{StaticResource ToggleActionButtonStyle}" Checked="AdvancedRuleTestToggle_CheckedChanged" Unchecked="AdvancedRuleTestToggle_CheckedChanged" />
+                                            <Button Grid.Column="2" Content="ביטול" Style="{StaticResource ActionButtonStyle}" Margin="0,0,6,0" Click="AdvancedRuleEditorCancelButton_Click" />
+                                            <Button Grid.Column="3" Content="שמירת ההתראה" Style="{StaticResource PrimaryActionButtonStyle}" Click="AdvancedRuleEditorSaveButton_Click" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- טאב 5: תצוגה על שולחן העבודה -->
+            <TabItem Header="שולחן עבודה">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
+                    <StackPanel>
+                        <CheckBox x:Name="OverlayEnabledCheckBox" Content="הצג את פרטי היום גם מעל שולחן העבודה" Checked="OverlayEnabledCheckBox_CheckedChanged" Unchecked="OverlayEnabledCheckBox_CheckedChanged" />
+
+                        <StackPanel x:Name="OverlayDetailsPanel" Margin="0,8,0,0">
+                            <TextBlock Style="{StaticResource SectionHeader}" Text="מה להציג" Margin="0,0,0,4" />
+                            <CheckBox x:Name="OverlayShowDayParashaCheckBox" Content="יום בשבוע ופרשת השבוע" />
+                            <CheckBox x:Name="OverlayShowHolidayCheckBox" Content="חג/מועד עברי (אם יש בתאריך הנוכחי)" />
+                            <CheckBox x:Name="OverlayShowHebrewDateCheckBox" Content="תאריך עברי מלא" />
+                            <CheckBox x:Name="OverlayShowGregorianDateCheckBox" Content="תאריך לועזי" />
+                            <CheckBox x:Name="OverlayShowTimeCheckBox" Content="שעה" />
+
+                            <TextBlock Style="{StaticResource SectionHeader}" Text="מיקום על המסך" />
+                            <ComboBox x:Name="OverlayPositionComboBox" SelectionChanged="OverlayPositionComboBox_SelectionChanged">
+                                <ComboBoxItem Content="מרכז המסך" />
+                                <ComboBoxItem Content="פינה שמאלית עליונה" />
+                                <ComboBoxItem Content="פינה ימנית עליונה" />
+                                <ComboBoxItem Content="פינה שמאלית תחתונה" />
+                                <ComboBoxItem Content="פינה ימנית תחתונה" />
+                                <ComboBoxItem Content="מיקום מותאם אישית (X, Y)" />
+                            </ComboBox>
+
+                            <Grid x:Name="OverlayCustomPositionGrid" Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="X" FontSize="11" />
+                                    <TextBox x:Name="OverlayCustomXTextBox" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Y" FontSize="11" />
+                                    <TextBox x:Name="OverlayCustomYTextBox" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Style="{StaticResource DescriptionText}" Margin="0,8,0,0"
+                                       Text="ניתן לגרור את התצוגה למיקום הרצוי (Ctrl + גרירת עכבר)." />
+                            <CheckBox x:Name="LockOverlayPositionCheckBox" Content="נעל מיקום" Margin="0,4,0,0" />
+
+                            <TextBlock Style="{StaticResource SectionHeader}" Text="גופן וגודל (משותף לכל הפריטים, אלא אם הותאם אישית ב'הגדרות מתקדמות' למטה)" TextWrapping="Wrap" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="60" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="OverlayFontFamilyTextBox" Grid.Column="0" Margin="0,0,6,0" />
+                                <TextBox x:Name="OverlayFontSizeTextBox" Grid.Column="1" />
+                            </Grid>
+
+                            <TextBlock Style="{StaticResource SectionHeader}" Text="צבע טקסט (משותף, אלא אם הותאם אישית למטה)" TextWrapping="Wrap" />
+                            <controls:ColorPickerControl x:Name="OverlayColorPicker" />
+
+                            <CheckBox x:Name="OverlayAlwaysOnTopCheckBox" Content="עליון תמיד (מעל כל שאר החלונות)" Margin="0,10,0,0" />
+
+                            <!-- הגדרות מתקדמות: מתקפל, סגור כברירת מחדל - התאמה אישית
+                                 (גופן/גודל/צבע נפרדים) לכל אחד מהפריטים המוצגים, וכן
+                                 קביעת הסדר ביניהם. -->
+                            <ToggleButton x:Name="OverlayAdvancedToggle" Content="הגדרות מתקדמות ⌄" HorizontalAlignment="Center" Margin="0,16,0,0"
+                                          Background="Transparent" BorderThickness="0" Foreground="{DynamicResource AccentForegroundBrush}"
+                                          Cursor="Hand" Checked="OverlayAdvancedToggle_CheckedChanged" Unchecked="OverlayAdvancedToggle_CheckedChanged" />
+
+                            <StackPanel x:Name="OverlayAdvancedPanel" Visibility="Collapsed" Margin="0,6,0,0">
+                                <TextBlock Style="{StaticResource DescriptionText}"
+                                           Text="ניתן להתאים אישית גודל, צבע וגופן נפרדים לכל פריט - במקום ההגדרה המשותפת למעלה." />
+
+                                <TextBlock Style="{StaticResource SectionHeader}" Text="סדר הצגה (מה מוצג מעל מה)" Margin="0,10,0,4" />
+                                <TextBlock Style="{StaticResource DescriptionText}"
+                                           Text="הפריט הראשון ברשימה מוצג למעלה. השתמשו בחיצים כדי לשנות את הסדר (פריטים שכבויים ב'מה להציג' למעלה פשוט לא יוצגו, גם אם מופיעים כאן)." />
+                                <StackPanel x:Name="OverlayOrderPanel" Margin="0,2,0,0" />
+
+                                <TextBlock Style="{StaticResource SectionHeader}" Text="שעה" Margin="0,10,0,4" />
+                                <CheckBox x:Name="OverlayTimeCustomStyleCheckBox" Content="התאמה אישית לפריט זה" Checked="OverlayItemCustomStyleCheckBox_CheckedChanged" Unchecked="OverlayItemCustomStyleCheckBox_CheckedChanged" />
+                                <StackPanel x:Name="OverlayTimeStylePanel" Margin="18,4,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="60" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="OverlayTimeFontFamilyTextBox" Grid.Column="0" Margin="0,0,6,0" />
+                                        <TextBox x:Name="OverlayTimeFontSizeTextBox" Grid.Column="1" />
+                                    </Grid>
+                                    <controls:ColorPickerControl x:Name="OverlayTimeColorPicker" Margin="0,4,0,0" />
+                                </StackPanel>
+
+                                <TextBlock Style="{StaticResource SectionHeader}" Text="יום בשבוע ופרשת השבוע" Margin="0,10,0,4" />
+                                <CheckBox x:Name="OverlayDayParashaCustomStyleCheckBox" Content="התאמה אישית לפריט זה" Checked="OverlayItemCustomStyleCheckBox_CheckedChanged" Unchecked="OverlayItemCustomStyleCheckBox_CheckedChanged" />
+                                <StackPanel x:Name="OverlayDayParashaStylePanel" Margin="18,4,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="60" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="OverlayDayParashaFontFamilyTextBox" Grid.Column="0" Margin="0,0,6,0" />
+                                        <TextBox x:Name="OverlayDayParashaFontSizeTextBox" Grid.Column="1" />
+                                    </Grid>
+                                    <controls:ColorPickerControl x:Name="OverlayDayParashaColorPicker" Margin="0,4,0,0" />
+                                </StackPanel>
+
+                                <TextBlock Style="{StaticResource SectionHeader}" Text="תאריך עברי מלא" Margin="0,10,0,4" />
+                                <CheckBox x:Name="OverlayHebrewCustomStyleCheckBox" Content="התאמה אישית לפריט זה" Checked="OverlayItemCustomStyleCheckBox_CheckedChanged" Unchecked="OverlayItemCustomStyleCheckBox_CheckedChanged" />
+                                <StackPanel x:Name="OverlayHebrewStylePanel" Margin="18,4,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="60" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="OverlayHebrewFontFamilyTextBox" Grid.Column="0" Margin="0,0,6,0" />
+                                        <TextBox x:Name="OverlayHebrewFontSizeTextBox" Grid.Column="1" />
+                                    </Grid>
+                                    <controls:ColorPickerControl x:Name="OverlayHebrewColorPicker" Margin="0,4,0,0" />
+                                </StackPanel>
+
+                                <TextBlock Style="{StaticResource SectionHeader}" Text="תאריך לועזי" Margin="0,10,0,4" />
+                                <CheckBox x:Name="OverlayGregorianCustomStyleCheckBox" Content="התאמה אישית לפריט זה" Checked="OverlayItemCustomStyleCheckBox_CheckedChanged" Unchecked="OverlayItemCustomStyleCheckBox_CheckedChanged" />
+                                <StackPanel x:Name="OverlayGregorianStylePanel" Margin="18,4,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="60" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="OverlayGregorianFontFamilyTextBox" Grid.Column="0" Margin="0,0,6,0" />
+                                        <TextBox x:Name="OverlayGregorianFontSizeTextBox" Grid.Column="1" />
+                                    </Grid>
+                                    <controls:ColorPickerControl x:Name="OverlayGregorianColorPicker" Margin="0,4,0,0" />
+                                </StackPanel>
+
+                                <TextBlock Style="{StaticResource SectionHeader}" Text="חג/מועד עברי" Margin="0,10,0,4" />
+                                <CheckBox x:Name="OverlayHolidayCustomStyleCheckBox" Content="התאמה אישית לפריט זה" Checked="OverlayItemCustomStyleCheckBox_CheckedChanged" Unchecked="OverlayItemCustomStyleCheckBox_CheckedChanged" />
+                                <StackPanel x:Name="OverlayHolidayStylePanel" Margin="18,4,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="60" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="OverlayHolidayFontFamilyTextBox" Grid.Column="0" Margin="0,0,6,0" />
+                                        <TextBox x:Name="OverlayHolidayFontSizeTextBox" Grid.Column="1" />
+                                    </Grid>
+                                    <controls:ColorPickerControl x:Name="OverlayHolidayColorPicker" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- טאב 6: אודות -->
+            <TabItem Header="כללי">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="הפעלה אוטומטית" Margin="0,0,0,4" />
+                        <CheckBox x:Name="StartWithWindowsCheckBox" Content="הפעל את התוכנה אוטומטית עם עליית Windows" />
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="מראה פאנל ההגדרות" Margin="0,16,0,4" />
+                        <ComboBox x:Name="SettingsPanelAppearanceComboBox" HorizontalAlignment="Left" MinWidth="120" SelectionChanged="SettingsPanelAppearanceComboBox_SelectionChanged">
+                            <ComboBoxItem Content="בהיר" />
+                            <ComboBoxItem Content="כהה" />
+                        </ComboBox>
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="עדכוני תוכנה" Margin="0,16,0,4" />
+                        <CheckBox x:Name="CheckForUpdatesCheckBox" Style="{StaticResource ToggleSwitchStyle}" Content="בדוק עדכונים אוטומטית (פעם ביום, בשקט)" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <TextBlock x:Name="UpdateStatusText" VerticalAlignment="Center" Text="לא נבדק עדיין בסשן הזה" />
+                            <Button x:Name="CheckUpdateNowButton" Content="בדוק עכשיו" Margin="10,0,0,0" Padding="8,2" Click="CheckUpdateNowButton_Click" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="UpdateAvailablePanel" Margin="0,10,0,0" Visibility="Collapsed">
+                            <TextBlock x:Name="UpdateAvailableText" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource AccentForegroundBrush}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button x:Name="UpdateNowButton" Content="עדכן" Style="{StaticResource PrimaryActionButtonStyle}" Click="UpdateNowButton_Click" />
+                                <Button x:Name="WhatsNewButton" Content="מה חדש בגרסה זו" Style="{StaticResource ActionButtonStyle}" Click="WhatsNewButton_Click" />
+                            </StackPanel>
+                            <ProgressBar x:Name="UpdateProgressBar" Style="{StaticResource RoundedProgressBarStyle}" Height="14" Margin="0,10,0,0" Minimum="0" Maximum="100" Visibility="Collapsed" />
+                            <TextBlock x:Name="UpdateProgressText" Margin="0,4,0,0" FontSize="10.5" Visibility="Collapsed" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="אודות">
+                <StackPanel Margin="4,16,4,4">
+                    <TextBlock x:Name="AboutVersionText" FontSize="14" FontWeight="SemiBold" TextAlignment="Center" />
+                    <TextBlock Text="גרסת בטא" TextAlignment="Center" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0" />
+                    <TextBlock Text="תאריכון - וידג'ט תאריך עברי לשורת המשימות" TextAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" />
+                    <TextBlock Text="מציג את התאריך העברי, היום בשבוע ופרשת השבוע, צמוד לשעון המערכת, ומאפשר צפייה בזמני היום ההלכתיים." TextAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="11.5" />
+                    <TextBlock Text="נתוני פרשת השבוע: Hebcal.com (רישיון CC BY 4.0)" TextAlignment="Center" Margin="0,10,0,0" FontSize="10.5" Foreground="{DynamicResource SecondaryForegroundBrush}" />
+                    <TextBlock TextAlignment="Center" Margin="0,10,0,0" FontSize="11">
+                        <Hyperlink x:Name="AboutGitHubLink" Click="AboutGitHubLink_Click">מקור התוכנה ב-GitHub</Hyperlink>
+                    </TextBlock>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

@@ -1,0 +1,31 @@
+<UserControl x:Class="HebrewTaskbarWidget.Controls.ColorPickerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             FlowDirection="RightToLeft"
+             d:DesignWidth="280">
+
+    <StackPanel>
+        <!-- לוח/ערכת הצבעים המובנית - הבחירה תמיד בלחיצה על אחת מהעיגולים, לא בהקלדה חופשית -->
+        <WrapPanel x:Name="SwatchesPanel" Orientation="Horizontal" />
+
+        <!-- אופציונלי: מחוון שקיפות (Alpha) לרקעים, מוסתר כברירת מחדל -->
+        <StackPanel x:Name="OpacityRow" Orientation="Horizontal" Margin="0,8,0,0" Visibility="Collapsed">
+            <TextBlock Text="שקיפות:" VerticalAlignment="Center" FontSize="11" Foreground="#B0B0B0" Margin="0,0,6,0" />
+            <Slider x:Name="OpacitySlider" Width="140" Minimum="0" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True" ValueChanged="OpacitySlider_ValueChanged" />
+        </StackPanel>
+
+        <!-- קוד הצבע שנבחר, מוצג מתחת ללוח הצבעים (לתצוגה בלבד) -->
+        <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Right">
+            <TextBlock Text="קוד הצבע: " VerticalAlignment="Center" FontSize="11" Foreground="#B0B0B0" />
+            <Border Width="16" Height="16" Margin="0,0,6,0" BorderBrush="#555860" BorderThickness="1" VerticalAlignment="Center">
+                <Border.Background>
+                    <SolidColorBrush x:Name="PreviewBrush" Color="White" />
+                </Border.Background>
+            </Border>
+            <TextBlock x:Name="HexCodeText" Text="#FFFFFF" FontFamily="Consolas" FontSize="11.5" VerticalAlignment="Center" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

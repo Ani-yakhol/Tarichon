@@ -1,4 +1,4 @@
-# תאריכון — וידג'ט תאריך עברי לשורת המשימות — גרסה 0.5.2
+# תאריכון — וידג'ט תאריך עברי לשורת המשימות — גרסה 0.5.3
 
 וידג'ט ל-Windows 10/11 המציג בשורת המשימות, צמוד לתצוגת התאריך/שעה המקורית:
 
@@ -31,22 +31,40 @@
    dotnet build -c Release
    ```
 
-   הפעולה בונה **שני** קבצי הרצה: `HebrewTaskbarWidget.exe` (הוידג'ט הראשי)
-   ו-`HebrewTaskbarWidgetSettings.exe` (גישה רשמית לפאנל ההגדרות, ראו בהמשך).
+   הפעולה בונה **שני** קבצי הרצה: `HebrewTaskbarWidget.exe` (הוידג'ט
+   הראשי) ו-`HebrewTaskbarWidgetSettings.exe` (גישה רשמית לפאנל ההגדרות,
+   ראו בהמשך) - שני קבצי ה-.csproj (וכל קוד המקור המשותף) יושבים יחד
+   באותה תיקייה, `src\HebrewTaskbarWidget.SettingsRecovery\` (ראו "מבנה
+   הפרוייקט" למטה).
 
-3. להרצה ישירה:
+3. להרצה ישירה של הוידג'ט הראשי:
 
    ```powershell
-   dotnet run --project src\HebrewTaskbarWidget\HebrewTaskbarWidget.csproj
+   dotnet run --project src\HebrewTaskbarWidget.SettingsRecovery\HebrewTaskbarWidget.csproj
    ```
 
 4. לבניית קובץ הרצה עצמאי (exe יחיד, לא דורש .NET מותקן במחשב היעד):
 
    ```powershell
-   dotnet publish src\HebrewTaskbarWidget\HebrewTaskbarWidget.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+   dotnet publish src\HebrewTaskbarWidget.SettingsRecovery\HebrewTaskbarWidget.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
    ```
 
-   קובץ ה-exe שנוצר יופיע בתיקייה `src\HebrewTaskbarWidget\bin\Release\net8.0-windows\win-x64\publish\`.
+   קובץ ה-exe שנוצר יופיע בתיקייה `src\HebrewTaskbarWidget.SettingsRecovery\bin\Release\net8.0-windows\win-x64\publish\`.
+
+## מבנה הפרוייקט
+
+מגרסה 0.5.3, שני קבצי ה-.csproj (`HebrewTaskbarWidget.csproj` - הוידג'ט
+הראשי, ו-`HebrewTaskbarWidget.SettingsRecovery.csproj` - כלי הגישה
+העצמאי להגדרות) יושבים יחד באותה תיקייה פיזית בדיוק,
+`src\HebrewTaskbarWidget.SettingsRecovery\`, יחד עם כל קוד המקור
+המשותף (Assets, Controls, Interop, Models, Services, VoiceAnnouncements
+וכו') - זאת כדי לבטל כפילות תיקיות מיותרת שהייתה קיימת קודם (שתי תיקיות
+נפרדות, שכל אחת "הרגישה" כאילו מכילה עותק שלם של האפליקציה). שני
+הקבצים עדיין מקומפלים לשני קבצי הרצה נפרדים לגמרי - פרוייקט
+`HebrewTaskbarWidget.SettingsRecovery.csproj` מגדיר `ProjectReference`
+לפרוייקט הראשי (השני, שיושב לצדו ממש) ומוסיף רק את שני הקבצים הייעודיים
+לו (`SettingsRecoveryApp.xaml`/`.xaml.cs`), עם נתיבי `bin`/`obj` נפרדים
+כדי לא להתנגש עם הפרוייקט הראשי.
 
 ## הרצה אוטומטית עם הפעלת Windows
 
@@ -62,12 +80,12 @@ Windows" בטאב "הוידג'ט" בפאנל ההגדרות - זה כל מה ש�
 לצד `HebrewTaskbarWidget.exe` נבנה גם קובץ הרצה שני, נפרד:
 `HebrewTaskbarWidgetSettings.exe` - פותח ישירות את פאנל ההגדרות הרשמי,
 ללא הרצת הוידג'ט עצמו. שינויים שנשמרים כאן נכנסים לתוקף מיידית גם אם
-הוידג'ט הראשי כבר רץ ברקע. זו דרך גישה רשמית ומלאה, שימושית בפרט כאשר
-הוידג'ט הראשי אינו נראה על המסך (למשל אחרי ניתוק צג חיצוני או שינוי
-רזולוציה קיצוני) - במקרה כזה, פתיחה מחדש של התוכנה הראשית לא תעזור (כבר
-יש מופע רץ ברקע), ופתיחה ישירה של ההגדרות דרך קובץ זה היא הדרך היחידה
-לתקן/לאפס את המיקום. אפשר גם ללחוץ שם על "כיבוי ויציאה מוחלטת מהתוכנה"
-כדי לסגור לגמרי את הוידג'ט הראשי, גם בלי גישה ללחיצה עליו.
+הוידג'ט הראשי כבר רץ ברקע. זו דרך גישה רשמית ומלאה, שימושית
+בפרט כאשר הוידג'ט הראשי אינו נראה על המסך (למשל אחרי ניתוק צג חיצוני או
+שינוי רזולוציה קיצוני) - במקרה כזה, פתיחה מחדש של התוכנה הראשית לא תעזור
+(כבר יש מופע רץ ברקע), ופתיחה ישירה של ההגדרות דרך קובץ זה היא הדרך
+היחידה לתקן/לאפס את המיקום. אפשר גם ללחוץ שם על "כיבוי ויציאה מוחלטת
+מהתוכנה" כדי לסגור לגמרי את הוידג'ט הראשי, גם בלי גישה ללחיצה עליו.
 
 ---
 

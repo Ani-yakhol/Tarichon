@@ -174,6 +174,8 @@ namespace HebrewTaskbarWidget.Models
     public sealed class AppSettings
     {
         // --- הוידג'ט בשורת המשימות ---
+        /// <summary>מתג-על: האם להציג את הוידג'ט בכלל בשורת המשימות. ברירת מחדל: מוצג. כשכבוי, שאר התוכנה (למשל התראות זמנים) ממשיכה לפעול כרגיל - רק התצוגה החזותית מוסתרת.</summary>
+        public bool ShowWidget { get; set; } = true;
         public WidgetPositionMode PositionMode { get; set; } = WidgetPositionMode.ChevronAttached;
 
         // --- מצב "מרחק מותאם אישית מקצה שורת המשימות" (WidgetPositionMode.CustomEdgeOffset) ---

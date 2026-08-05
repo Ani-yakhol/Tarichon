@@ -382,6 +382,8 @@
             <TabItem Header="הוידג'ט">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
                     <StackPanel>
+                        <CheckBox x:Name="ShowWidgetCheckBox" Content="הצג את הוידג'ט בשורת המשימות" Margin="0,0,0,14" />
+
                         <TextBlock Style="{StaticResource SectionHeader}" Text="מיקום הוידג'ט בשורת המשימות" Margin="0,0,0,4" />
                         <RadioButton x:Name="PositionChevronRadio" GroupName="PositionMode" Content="צמוד לחץ ה-^ (הצג סמלים מוסתרים) - ברירת מחדל" Checked="PositionMode_Changed" />
                         <RadioButton x:Name="PositionCustomEdgeRadio" GroupName="PositionMode" Content="בתוך שורת המשימות, במרחק מותאם אישית מקצה (בפיקסלים)" Checked="PositionMode_Changed" />
@@ -594,18 +596,17 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
                     <StackPanel>
                         <CheckBox x:Name="NotificationsEnabledCheckBox" Content="הפעל התראות על זמני היום" Checked="NotificationsEnabledCheckBox_CheckedChanged" Unchecked="NotificationsEnabledCheckBox_CheckedChanged" />
-                        <CheckBox x:Name="DisableNotificationsOnShabbatCheckBox" Content="כבה התראות בשבתות וחגים" Margin="0,4,0,0" />
-                        <TextBlock Style="{StaticResource DescriptionText}" Margin="18,2,0,0" TextWrapping="Wrap"
-                                   Text="לא כולל חנוכה, פורים וכדומה - רק ימים שיש בהם 'הדלקת נרות' בערבם. יום ההדלקה עצמו (כולל ההתראה עליה) לא מושפע." />
 
                         <StackPanel x:Name="NotificationsDetailsPanel" Margin="0,8,0,0">
+
+                            <CheckBox x:Name="DisableNotificationsOnShabbatCheckBox" Content="כבה התראות בשבתות וחגים" Margin="0,0,0,8" />
 
                             <TextBlock Style="{StaticResource SectionHeader}" Text="מה להציג (הגדרה כללית)" Margin="0,0,0,4" />
                             <StackPanel Orientation="Horizontal">
                                 <CheckBox x:Name="NotificationShowPopupCheckBox" Content="הודעה צפה" Checked="NotificationShowPopupCheckBox_CheckedChanged" Unchecked="NotificationShowPopupCheckBox_CheckedChanged" VerticalAlignment="Center" />
                                 <TextBlock Text="," VerticalAlignment="Center" Margin="2,0,0,0" />
                                 <StackPanel x:Name="NotificationToastDurationPanel" Orientation="Horizontal" Margin="4,0,0,0">
-                                    <TextBlock Text="משך תצוגה (בשניות):" VerticalAlignment="Center" />
+                                    <TextBlock Text="משך תצוגה:" VerticalAlignment="Center" />
                                     <TextBox x:Name="NotificationToastDurationTextBox" Width="50" Margin="6,0,0,0" TextAlignment="Center" VerticalAlignment="Center" />
                                     <TextBlock Text="רקע:" VerticalAlignment="Center" Margin="12,0,0,0" />
                                     <ComboBox x:Name="NotificationToastBackgroundComboBox" Width="70" Margin="6,0,0,0" VerticalAlignment="Center">

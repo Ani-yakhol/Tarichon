@@ -188,7 +188,7 @@ namespace HebrewTaskbarWidget
                 MainTabControl.SelectedIndex = initialTabIndex;
             }
 
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.3";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.4";
             AboutVersionText.Text = $"תאריכון - גרסה {version}";
         }
 
@@ -220,6 +220,7 @@ namespace HebrewTaskbarWidget
             {
                 SettingsPanelDarkMode = source.SettingsPanelDarkMode,
                 SettingsPanelDarkColorHex = source.SettingsPanelDarkColorHex,
+                ShowWidget = source.ShowWidget,
                 PositionMode = source.PositionMode,
                 CustomOffsetSide = source.CustomOffsetSide,
                 CustomOffsetPixels = source.CustomOffsetPixels,
@@ -665,6 +666,7 @@ namespace HebrewTaskbarWidget
             // ישנה משהו בהגדרות המרחק המותאם אישית, המיקום החופשי יוחלף.
             _freeDragPreserved = s.PositionMode == WidgetPositionMode.FreeDrag && s.FreeDragLeft.HasValue && s.FreeDragTop.HasValue;
 
+            ShowWidgetCheckBox.IsChecked = s.ShowWidget;
             PositionChevronRadio.IsChecked = s.PositionMode == WidgetPositionMode.ChevronAttached;
             PositionCustomEdgeRadio.IsChecked = s.PositionMode == WidgetPositionMode.CustomEdgeOffset || _freeDragPreserved;
 
@@ -2108,6 +2110,7 @@ namespace HebrewTaskbarWidget
                 SettingsPanelDarkColorHex = DefaultDarkBackgroundHex,
 
                 // --- הוידג'ט: מיקום ---
+                ShowWidget = ShowWidgetCheckBox.IsChecked == true,
                 PositionMode = ResolvePositionMode(),
                 CustomOffsetSide = CustomOffsetSideComboBox.SelectedIndex == 1 ? WidgetAttachSide.Left : WidgetAttachSide.Right,
                 CustomOffsetPixels = ParseDoubleOrDefault(CustomOffsetPixelsTextBox.Text, 250.0),

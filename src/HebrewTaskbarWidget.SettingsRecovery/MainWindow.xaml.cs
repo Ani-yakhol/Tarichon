@@ -870,6 +870,13 @@ namespace HebrewTaskbarWidget
         private void UpdateContent()
         {
             AppSettings settings = SettingsService.Current;
+
+            // "הצג את הוידג'ט בשורת המשימות" - מתג-על שמסתיר את כל הוידג'ט
+            // (Visibility, לא Close) - הטיימרים/הלוגיקה הפנימיים ממשיכים
+            // לרוץ כרגיל ברקע (למשל התראות זמנים, שהן תכונה נפרדת) - רק
+            // התצוגה החזותית של הוידג'ט עצמו מוסתרת.
+            Visibility = settings.ShowWidget ? Visibility.Visible : Visibility.Hidden;
+
             DateTime now = AppTimeService.Now();
             DateTime hebrewDisplayDate = HebrewDayRolloverService.GetEffectiveHebrewDate(now, settings, SettingsService.BuildLocation());
             HebrewDateDisplay display = HebrewDateFormatter.Format(hebrewDisplayDate);
@@ -1331,7 +1338,7 @@ namespace HebrewTaskbarWidget
 
         private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.3";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.4";
 
             AppMessageBoxWindow.Show(
                 $"תאריכון - וידג'ט תאריך עברי לשורת המשימות\nגרסה {version}\n\n" +

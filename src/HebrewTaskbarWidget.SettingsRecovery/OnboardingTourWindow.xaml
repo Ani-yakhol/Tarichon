@@ -1,0 +1,166 @@
+<Window x:Class="HebrewTaskbarWidget.OnboardingTourWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="תאריכון - סיור היכרות"
+        FlowDirection="RightToLeft"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        Topmost="True"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        KeyDown="OnboardingTourWindow_KeyDown">
+
+    <!--
+        חלונית סיור היכרות ראשוני - מציגה תמונות (screenshots) שמדגימות את
+        יכולות התוכנה, עם ניווט חיצים וסמלוני-דף ("dots"). רקע בהיר קבוע
+        (לא תלוי במצב כהה/בהיר של פאנל ההגדרות - ראו דרישה מפורשת) ואין
+        שום קו-מתאר סביב התמונה עצמה - היא אמורה "לשבת" בטבעיות בתוך
+        החלונית, לא להיראות כמו רכיב "מציג תמונות" נפרד.
+
+        על גודל התמונות המומלץ ואיך להוסיף עוד תמונות מעבר ל-6 - ראו את
+        ה-Docstring המפורט בראש OnboardingTourWindow.xaml.cs.
+    -->
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="OnboardingAccentBrush" Color="#1A5FB4" />
+        <SolidColorBrush x:Key="OnboardingDotInactiveBrush" Color="#D5D5D8" />
+
+        <!-- כפתורי החיצים - גלימה בלבד, בלי מסגרת/תיבה קבועה, עם עיגול-רקע
+             עדין רק במעבר עכבר, כדי שלא ייראו כמו כפתורי-תוכנה "כבדים" אלא
+             ישתלבו בטבעיות לצד התמונה. -->
+        <Style x:Key="NavArrowButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="#4A4B50" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="20" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#14000000" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#22000000" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.22" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- כפתורי "דלג" / "הזכר לי אחר כך" - סגנון קישור שטוח (בלי תיבה),
+             כמו בשאר חלוניות ההודעה של התוכנה. -->
+        <Style x:Key="OnboardingLinkButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="#5B5D63" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#0F000000" />
+                                <Setter Property="Foreground" Value="#1B1C1F" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- כפתור "דלג" הראשי - מודגש קלות (accent), כדי לבדל אותו מ"הזכר לי
+             אחר כך" (המשני) ולרמז שזו הבחירה הסופית/הפחות-הפיכה. -->
+        <Style x:Key="OnboardingSkipButtonStyle" TargetType="Button" BasedOn="{StaticResource OnboardingLinkButtonStyle}">
+            <Setter Property="Foreground" Value="{StaticResource OnboardingAccentBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </Window.Resources>
+
+    <Border x:Name="RootBorder"
+            CornerRadius="14"
+            Background="#FFFFFF"
+            BorderThickness="1"
+            BorderBrush="#E4E4E6"
+            Width="560">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="26" ShadowDepth="5" Opacity="0.30" Color="Black" />
+        </Border.Effect>
+
+        <StackPanel Margin="0,24,0,18">
+            <TextBlock Text="סיור היכרות קצר עם תאריכון"
+                       FontSize="15" FontWeight="Bold"
+                       Foreground="#1B1C1F"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,16" />
+
+            <!-- אזור התמונה + חיצי ניווט. עמודה 0 (בצד ימין ב-RTL) = חץ "<"
+                 (הקודם); עמודה 2 (בצד שמאל ב-RTL) = חץ ">" (הבא) - כמקובל
+                 בממשקי RTL, שבהם ההתקדמות "קדימה" נעה שמאלה. -->
+            <Grid Margin="14,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="PrevButton" Grid.Column="0" Content="&lt;"
+                        Style="{StaticResource NavArrowButtonStyle}"
+                        VerticalAlignment="Center"
+                        Click="PrevButton_Click"
+                        ToolTip="הקודם" />
+
+                <!-- אין שום Border/מסגרת סביב התמונה עצמה בכוונה - היא
+                     אמורה להשתלב בטבעיות בתוך רקע החלונית הבהיר. -->
+                <Grid Grid.Column="1" Width="480" Height="300" Margin="6,0">
+                    <!-- RenderOptions.BitmapScalingMode="HighQuality": ברירת המחדל
+                         של WPF להקטנת תמונות (Bilinear רגיל) נוטה להיראות מטושטשת;
+                         המצב הזה (אלגוריתם Fant) חד משמעותית בהקטנה - וזה בדיוק המצב
+                         כאן (תמונת מקור 1440x900 מוצגת בתיבה של 480x300). -->
+                    <Image x:Name="SlideImage" Stretch="Uniform"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           UseLayoutRounding="True" SnapsToDevicePixels="True" />
+                </Grid>
+
+                <Button x:Name="NextButton" Grid.Column="2" Content="&gt;"
+                        Style="{StaticResource NavArrowButtonStyle}"
+                        VerticalAlignment="Center"
+                        Click="NextButton_Click"
+                        ToolTip="הבא" />
+            </Grid>
+
+            <!-- נקודות עמוד - נבנות דינמית בקוד (לפי מספר התמונות שנמצאו
+                 בפועל), עם הנקודה של השקופית הנוכחית מודגשת בצבע ה-Accent. -->
+            <StackPanel x:Name="DotsPanel" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0" />
+
+            <Grid Margin="22,18,22,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="SkipButton" Content="דלג" Style="{StaticResource OnboardingSkipButtonStyle}" Click="SkipButton_Click" />
+                    <Button x:Name="RemindLaterButton" Content="הזכר לי אחר כך" Style="{StaticResource OnboardingLinkButtonStyle}" Click="RemindLaterButton_Click" Margin="4,0,0,0" />
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

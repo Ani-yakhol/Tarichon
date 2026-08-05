@@ -28,8 +28,8 @@ namespace HebrewTaskbarWidget
     /// בזמן ריצה ומציגה רק את מה שקיים בפועל על הדיסק - אפשר להתחיל עם
     /// פחות מ-6 תמונות בלי לשנות קוד כלל.
     ///
-    /// גודל מומלץ לכל תמונה: **1440×900 פיקסלים, יחס 16:10, PNG**.
-    /// התמונה מוצגת בפועל בתוך תיבה בגודל 480×300 (עם Stretch="Uniform" -
+    /// גודל מומלץ לכל תמונה: **1920×1200 פיקסלים, יחס 16:10, PNG**.
+    /// התמונה מוצגת בפועל בתוך תיבה בגודל 640×400 (עם Stretch="Uniform" -
     /// שומר על יחס הגובה-רוחב המקורי, לא מעוות) - כלומר גודל התצוגה בפועל
     /// הוא פי 3 קטן מהתמונה המקורית, מה שמבטיח חדות גבוהה גם על מסכים
     /// עם קנה-מידה (DPI Scaling) גבוה (עד פי 3). תמונות שאינן ביחס 16:10
@@ -116,9 +116,9 @@ namespace HebrewTaskbarWidget
 
                 var dot = new Ellipse
                 {
-                    Width = 9,
-                    Height = 9,
-                    Margin = new Thickness(4, 0, 4, 0),
+                    Width = 12,
+                    Height = 12,
+                    Margin = new Thickness(5, 0, 5, 0),
                     Fill = (Brush)FindResource("OnboardingDotInactiveBrush"),
                     Cursor = Cursors.Hand,
                 };

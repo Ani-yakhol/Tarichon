@@ -347,6 +347,16 @@ namespace HebrewTaskbarWidget.Models
         // --- התראות על זמני היום ---
         public bool NotificationsEnabled { get; set; } = false;
 
+        /// <summary>
+        /// ברירת המחדל: מסומן. כשמסומן, כל ההתראות על זמני היום מושתקות
+        /// בימים שהם עצמם שבת, או אחד מהחגים שיש לפניהם זמן "הדלקת נרות"
+        /// (ראו HolidayService.IsErevCandleLighting) - כלומר לא כולל חנוכה,
+        /// פורים, ראש חודש וכדומה, שממשיכים לקבל התראות רגיל בהם. יום שישי/
+        /// ערב חג עצמו (כולל התראת "הדלקת נרות") **אינו** מושתק - רק היום
+        /// שבו כבר "בתוך" השבת/החג.
+        /// </summary>
+        public bool DisableNotificationsOnShabbatAndChagim { get; set; } = true;
+
         /// <summary>האם להציג הודעה קופצת (צפה מעל הוידג'ט). ניתן לסמן זאת ו/או השמעת צליל, אחד או שניהם.</summary>
         public bool NotificationShowPopup { get; set; } = true;
 

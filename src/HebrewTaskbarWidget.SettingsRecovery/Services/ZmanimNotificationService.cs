@@ -50,6 +50,18 @@ namespace HebrewTaskbarWidget.Services
                 return;
             }
 
+            DateTime today = AppTimeService.Today();
+
+            // "כבה התראות בשבתות וחגים" - נבדק לפי אתמול: אם אתמול היה ערב
+            // שבת/חג (עם הדלקת נרות), סימן שהיום הוא בפועל שבת/חג עצמו -
+            // ראו HolidayService.IsErevCandleLighting. שימו לב: היום שבו
+            // *מתחיל* השבת/החג (ליל שישי/ערב חג, כולל התראת הדלקת הנרות
+            // עצמה) אינו מושתק בכוונה - רק הימים שכבר "בתוך" השבת/החג.
+            if (settings.DisableNotificationsOnShabbatAndChagim && HolidayService.IsErevCandleLighting(today.AddDays(-1)))
+            {
+                return;
+            }
+
             bool hasMainRules = settings.ZmanNotificationRules.Any(r => r.Enabled);
             bool hasAdvancedRules = settings.AdvancedNotificationRules.Any(r => r.Enabled);
             if (!hasMainRules && !hasAdvancedRules)
@@ -57,7 +69,6 @@ namespace HebrewTaskbarWidget.Services
                 return;
             }
 
-            DateTime today = AppTimeService.Today();
             if (today != _lastCheckedDate)
             {
                 // יום חדש - מאפסים את רשימת ההתראות שכבר נשלחו

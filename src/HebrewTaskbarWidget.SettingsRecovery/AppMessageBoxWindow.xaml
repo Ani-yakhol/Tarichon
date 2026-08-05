@@ -124,6 +124,16 @@
                               VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <TextBlock x:Name="MessageTextBlock" TextWrapping="Wrap" TextAlignment="Center" FontSize="12.5" LineHeight="19" />
                 </ScrollViewer>
+
+                <!-- תוכן ארוך ומובנה (כמו "מה חדש בגרסה זו") מוצג דרך זה
+                     במקום ה-ScrollViewer/TextBlock הרגילים למעלה - ראו
+                     AppMessageBoxWindow.xaml.cs (largeScrollable, BuildReleaseNotesDocument).
+                     FlowDocument תומך ב-RTL וברשימות-תבליטים באופן טבעי
+                     ונכון (כולל הזחה תלויה לשורות עטופות) - בניגוד ל-
+                     TextBlock פשוט, שאין לו מושג "פסקה"/"פריט רשימה" בכלל. -->
+                <FlowDocumentScrollViewer x:Name="MessageFlowViewer" Margin="0,14,0,0"
+                                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                          Visibility="Collapsed" Padding="0" />
             </StackPanel>
 
             <Border x:Name="ButtonAreaBorder" BorderThickness="0,1,0,0">

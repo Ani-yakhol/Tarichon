@@ -1331,10 +1331,10 @@ namespace HebrewTaskbarWidget
 
         private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.2";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.3";
 
             AppMessageBoxWindow.Show(
-                $"תאריכון - וידג'ט תאריך עברי לשורת המשימות\nגרסה {version} (גרסת בטא)\n\n" +
+                $"תאריכון - וידג'ט תאריך עברי לשורת המשימות\nגרסה {version}\n\n" +
                 "מציג את התאריך העברי, היום בשבוע ופרשת השבוע, צמוד לשעון המערכת.\n\n" +
                 "נתוני פרשת השבוע: Hebcal.com (רישיון CC BY 4.0)\n\n" +
                 $"מקור התוכנה: {UpdateService.RepositoryUrl}",

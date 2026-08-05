@@ -188,7 +188,7 @@ namespace HebrewTaskbarWidget
                 MainTabControl.SelectedIndex = initialTabIndex;
             }
 
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.2";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.3";
             AboutVersionText.Text = $"תאריכון - גרסה {version}";
         }
 
@@ -268,6 +268,7 @@ namespace HebrewTaskbarWidget
                 Use12HourFormat = source.Use12HourFormat,
                 ShowSecondsInTime = source.ShowSecondsInTime,
                 NotificationsEnabled = source.NotificationsEnabled,
+                DisableNotificationsOnShabbatAndChagim = source.DisableNotificationsOnShabbatAndChagim,
                 NotificationShowPopup = source.NotificationShowPopup,
                 NotificationToastDurationSeconds = source.NotificationToastDurationSeconds,
                 SnoozeDurationMinutes = source.SnoozeDurationMinutes,
@@ -766,6 +767,7 @@ namespace HebrewTaskbarWidget
 
             // --- התראות ---
             NotificationsEnabledCheckBox.IsChecked = s.NotificationsEnabled;
+            DisableNotificationsOnShabbatCheckBox.IsChecked = s.DisableNotificationsOnShabbatAndChagim;
             NotificationsDetailsPanel.IsEnabled = s.NotificationsEnabled;
             NotificationShowPopupCheckBox.IsChecked = s.NotificationShowPopup;
             NotificationToastDurationPanel.IsEnabled = s.NotificationShowPopup;
@@ -1196,7 +1198,7 @@ namespace HebrewTaskbarWidget
             }
 
             AppMessageBoxWindow.Show(
-                NormalizeReleaseNotesForRtl(available.ReleaseNotes),
+                available.ReleaseNotes,
                 $"מה חדש בגרסה {available.Version}",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information,
@@ -1204,62 +1206,6 @@ namespace HebrewTaskbarWidget
                 largeScrollable: true);
         }
 
-        /// <summary>
-        /// "מה חדש בגרסה זו" מציג טקסט Markdown גולמי כפי שהוא מגיע מ-GitHub
-        /// Releases (כותרות "##"/"###", תבליטים "- "/"* " וכו') בתוך TextBlock
-        /// פשוט (לא מפרש Markdown) - כשהתוכן בעברית, שילוב של תווי Markdown
-        /// ניטרליים ומספרי גרסה (כמו "0.5.4") בתחילת שורה מבלבל את אלגוריתם
-        /// ה-Bidi הפנימי ב-WPF, וגורם לשורות להיראות "לא RTL" (התו הראשון
-        /// בשורה נדחק שמאלה במקום ימינה, למרות TextAlignment.Right שכבר מוגדר
-        /// למצב "גלילה גדולה" - ראו AppMessageBoxWindow). כאן מנקים סימוני
-        /// Markdown גולמיים (מוחלפים בתבליט "•" קריא, כותרות מאבדות את ה-#)
-        /// ומוסיפים סימן RTL בלתי-נראה (U+200F) בתחילת כל שורה לא-ריקה, כדי
-        /// לעגן את כיוון הבסיס שלה כ-RTL באופן מפורש ולא להשאיר את זה לניחוש
-        /// של האלגוריתם.
-        /// </summary>
-        private static string NormalizeReleaseNotesForRtl(string raw)
-        {
-            const char RightToLeftMark = '\u200F';
-
-            string[] lines = raw.Replace("\r\n", "\n").Split('\n');
-
-            for (int i = 0; i < lines.Length; i++)
-            {
-                string line = lines[i].TrimEnd();
-                string trimmedStart = line.TrimStart();
-                int leadingSpaces = line.Length - trimmedStart.Length;
-                string indent = line.Substring(0, leadingSpaces);
-
-                if (trimmedStart.Length == 0)
-                {
-                    lines[i] = string.Empty;
-                    continue;
-                }
-
-                // כותרות Markdown ("#", "##", "###" ...) - מסירים את סימני ה-#
-                // עצמם (אין תמיכה בהדגשה חזותית ב-TextBlock פשוט ממילא).
-                int hashCount = 0;
-                while (hashCount < trimmedStart.Length && trimmedStart[hashCount] == '#')
-                {
-                    hashCount++;
-                }
-                if (hashCount > 0 && hashCount < trimmedStart.Length && trimmedStart[hashCount] == ' ')
-                {
-                    trimmedStart = trimmedStart.Substring(hashCount + 1);
-                }
-
-                // תבליטי רשימה ("- " / "* ") - הופכים לתבליט "•" קריא יותר.
-                if (trimmedStart.StartsWith("- ", StringComparison.Ordinal) ||
-                    trimmedStart.StartsWith("* ", StringComparison.Ordinal))
-                {
-                    trimmedStart = "• " + trimmedStart.Substring(2);
-                }
-
-                lines[i] = indent + RightToLeftMark + trimmedStart;
-            }
-
-            return string.Join("\n", lines);
-        }
 
         private async void CheckUpdateNowButton_Click(object sender, RoutedEventArgs e)
         {
@@ -2235,6 +2181,7 @@ namespace HebrewTaskbarWidget
 
                 // --- התראות ---
                 NotificationsEnabled = NotificationsEnabledCheckBox.IsChecked == true,
+                DisableNotificationsOnShabbatAndChagim = DisableNotificationsOnShabbatCheckBox.IsChecked == true,
                 NotificationShowPopup = NotificationShowPopupCheckBox.IsChecked == true,
                 NotificationToastDurationSeconds = Math.Max(1, ParseDoubleOrDefault(NotificationToastDurationTextBox.Text, 15.0)),
                 SnoozeDurationMinutes = Math.Max(1, (int)ParseDoubleOrDefault(SnoozeDurationMinutesTextBox.Text, 2)),

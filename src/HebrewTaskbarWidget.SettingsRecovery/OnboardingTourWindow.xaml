@@ -34,9 +34,9 @@
              עדין רק במעבר עכבר, כדי שלא ייראו כמו כפתורי-תוכנה "כבדים" אלא
              ישתלבו בטבעיות לצד התמונה. -->
         <Style x:Key="NavArrowButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="40" />
-            <Setter Property="Height" Value="40" />
-            <Setter Property="FontSize" Value="18" />
+            <Setter Property="Width" Value="53" />
+            <Setter Property="Height" Value="53" />
+            <Setter Property="FontSize" Value="24" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Foreground" Value="#4A4B50" />
             <Setter Property="Background" Value="Transparent" />
@@ -46,7 +46,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" CornerRadius="20" Background="{TemplateBinding Background}">
+                        <Border x:Name="Bd" CornerRadius="27" Background="{TemplateBinding Background}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -70,8 +70,8 @@
         <Style x:Key="OnboardingLinkButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="8,4" />
-            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="11,5" />
+            <Setter Property="FontSize" Value="16" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Foreground" Value="#5B5D63" />
             <Setter Property="Template">
@@ -100,26 +100,26 @@
     </Window.Resources>
 
     <Border x:Name="RootBorder"
-            CornerRadius="14"
+            CornerRadius="19"
             Background="#FFFFFF"
             BorderThickness="1"
             BorderBrush="#E4E4E6"
-            Width="560">
+            Width="747">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="26" ShadowDepth="5" Opacity="0.30" Color="Black" />
+            <DropShadowEffect BlurRadius="35" ShadowDepth="7" Opacity="0.30" Color="Black" />
         </Border.Effect>
 
-        <StackPanel Margin="0,24,0,18">
+        <StackPanel Margin="0,32,0,24">
             <TextBlock Text="סיור היכרות קצר עם תאריכון"
-                       FontSize="15" FontWeight="Bold"
+                       FontSize="20" FontWeight="Bold"
                        Foreground="#1B1C1F"
                        HorizontalAlignment="Center"
-                       Margin="0,0,0,16" />
+                       Margin="0,0,0,21" />
 
             <!-- אזור התמונה + חיצי ניווט. עמודה 0 (בצד ימין ב-RTL) = חץ "<"
                  (הקודם); עמודה 2 (בצד שמאל ב-RTL) = חץ ">" (הבא) - כמקובל
                  בממשקי RTL, שבהם ההתקדמות "קדימה" נעה שמאלה. -->
-            <Grid Margin="14,0">
+            <Grid Margin="19,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
@@ -133,12 +133,15 @@
                         ToolTip="הקודם" />
 
                 <!-- אין שום Border/מסגרת סביב התמונה עצמה בכוונה - היא
-                     אמורה להשתלב בטבעיות בתוך רקע החלונית הבהיר. -->
-                <Grid Grid.Column="1" Width="480" Height="300" Margin="6,0">
+                     אמורה להשתלב בטבעיות בתוך רקע החלונית הבהיר. גודל התצוגה
+                     (640x400) - פי 4/3 מהגודל המקורי (480x300), עדיין ביחס
+                     16:10 מדוייק, תואם לגודל התמונות המומלץ (1440x900 -
+                     ראו התיעוד ב-OnboardingTourWindow.xaml.cs). -->
+                <Grid Grid.Column="1" Width="640" Height="400" Margin="8,0">
                     <!-- RenderOptions.BitmapScalingMode="HighQuality": ברירת המחדל
                          של WPF להקטנת תמונות (Bilinear רגיל) נוטה להיראות מטושטשת;
                          המצב הזה (אלגוריתם Fant) חד משמעותית בהקטנה - וזה בדיוק המצב
-                         כאן (תמונת מקור 1440x900 מוצגת בתיבה של 480x300). -->
+                         כאן (תמונת מקור 1440x900 מוצגת בתיבה של 640x400). -->
                     <Image x:Name="SlideImage" Stretch="Uniform"
                            RenderOptions.BitmapScalingMode="HighQuality"
                            UseLayoutRounding="True" SnapsToDevicePixels="True" />
@@ -152,13 +155,15 @@
             </Grid>
 
             <!-- נקודות עמוד - נבנות דינמית בקוד (לפי מספר התמונות שנמצאו
-                 בפועל), עם הנקודה של השקופית הנוכחית מודגשת בצבע ה-Accent. -->
-            <StackPanel x:Name="DotsPanel" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0" />
+                 בפועל), עם הנקודה של השקופית הנוכחית מודגשת בצבע ה-Accent.
+                 גודל הנקודות עצמן מוגדר בקוד (OnboardingTourWindow.xaml.cs,
+                 BuildDots) - הוגדל שם באותו יחס. -->
+            <StackPanel x:Name="DotsPanel" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,19,0,0" />
 
-            <Grid Margin="22,18,22,0">
+            <Grid Margin="29,24,29,0">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="SkipButton" Content="דלג" Style="{StaticResource OnboardingSkipButtonStyle}" Click="SkipButton_Click" />
-                    <Button x:Name="RemindLaterButton" Content="הזכר לי אחר כך" Style="{StaticResource OnboardingLinkButtonStyle}" Click="RemindLaterButton_Click" Margin="4,0,0,0" />
+                    <Button x:Name="RemindLaterButton" Content="הזכר לי אחר כך" Style="{StaticResource OnboardingLinkButtonStyle}" Click="RemindLaterButton_Click" Margin="5,0,0,0" />
                 </StackPanel>
             </Grid>
         </StackPanel>

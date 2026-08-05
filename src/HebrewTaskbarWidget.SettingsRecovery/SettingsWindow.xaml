@@ -594,6 +594,9 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
                     <StackPanel>
                         <CheckBox x:Name="NotificationsEnabledCheckBox" Content="הפעל התראות על זמני היום" Checked="NotificationsEnabledCheckBox_CheckedChanged" Unchecked="NotificationsEnabledCheckBox_CheckedChanged" />
+                        <CheckBox x:Name="DisableNotificationsOnShabbatCheckBox" Content="כבה התראות בשבתות וחגים" Margin="0,4,0,0" />
+                        <TextBlock Style="{StaticResource DescriptionText}" Margin="18,2,0,0" TextWrapping="Wrap"
+                                   Text="לא כולל חנוכה, פורים וכדומה - רק ימים שיש בהם 'הדלקת נרות' בערבם. יום ההדלקה עצמו (כולל ההתראה עליה) לא מושפע." />
 
                         <StackPanel x:Name="NotificationsDetailsPanel" Margin="0,8,0,0">
 
@@ -937,7 +940,6 @@
             <TabItem Header="אודות">
                 <StackPanel Margin="4,16,4,4">
                     <TextBlock x:Name="AboutVersionText" FontSize="14" FontWeight="SemiBold" TextAlignment="Center" />
-                    <TextBlock Text="גרסת בטא" TextAlignment="Center" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0" />
                     <TextBlock Text="תאריכון - וידג'ט תאריך עברי לשורת המשימות" TextAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" />
                     <TextBlock Text="מציג את התאריך העברי, היום בשבוע ופרשת השבוע, צמוד לשעון המערכת, ומאפשר צפייה בזמני היום ההלכתיים." TextAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="11.5" />
                     <TextBlock Text="נתוני פרשת השבוע: Hebcal.com (רישיון CC BY 4.0)" TextAlignment="Center" Margin="0,10,0,0" FontSize="10.5" Foreground="{DynamicResource SecondaryForegroundBrush}" />

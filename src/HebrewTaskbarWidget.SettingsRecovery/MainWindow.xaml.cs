@@ -1338,7 +1338,7 @@ namespace HebrewTaskbarWidget
 
         private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.4";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.5";
 
             AppMessageBoxWindow.Show(
                 $"תאריכון - וידג'ט תאריך עברי לשורת המשימות\nגרסה {version}\n\n" +

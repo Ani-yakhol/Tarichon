@@ -72,6 +72,8 @@ namespace HebrewTaskbarWidget
 
                 MessageScrollViewer.Visibility = Visibility.Collapsed;
                 MessageFlowViewer.Visibility = Visibility.Visible;
+                MessageFlowViewer.FlowDirection = FlowDirection.RightToLeft;
+                MessageFlowViewer.Language = System.Windows.Markup.XmlLanguage.GetLanguage("he-IL");
                 MessageFlowViewer.MaxHeight = LargeModeScrollMaxHeight;
                 MessageFlowViewer.Document = BuildReleaseNotesDocument(text);
             }
@@ -95,9 +97,28 @@ namespace HebrewTaskbarWidget
         /// </summary>
         private static FlowDocument BuildReleaseNotesDocument(string rawText)
         {
+            // Language="he-IL" (בנוסף ל-FlowDirection) - ראו התיעוד הרשמי של
+            // WPF ל-BIDI: הדוגמאות שם תמיד מציינות את שתי התכונות יחד על
+            // אותו אלמנט. בלי Language, מנוע יישור-הטקסט (Uniscribe/DirectWrite)
+            // עשוי לפתור תווים "חלשים"/ניטרליים (כמו ספרות בתוך "0.6.4",
+            // סימני פיסוק) לפי הנחת-ברירת-מחדל לא-עברית, מה שעלול לגרום
+            // להם "לברוח" למקום הלא-נכון בתוך פסקה בעברית - זה כנראה מה
+            // שנראה כמו "יישור RTL לא הושג" למרות ש-FlowDirection כשלעצמו
+            // כן הוגדר נכון. מוגדר כאן במפורש בכל רמה (מסמך, כל פסקה/רשימה/
+            // Run) ולא מוסתמך רק על ירושה - ליתר ביטחון, אחרי שתי הודעות
+            // קודמות שבהן הבעיה חזרה על עצמה. כרשת ביטחון נוספת (זולה
+            // וללא תופעות לוואי גלויות), כל שורת טקסט מקבלת גם תו RLM
+            // (Right-to-Left Mark, U+200F) בלתי-נראה בתחילתה - כדי לעגן את
+            // כיוון הבסיס של הפסקה כ-RTL באופן חד-משמעי מבחינת האלגוריתם,
+            // ולא רק דרך FlowDirection/Language שאמורים להספיק לבד.
+            const char Rlm = '\u200F';
+
+            var hebrew = System.Windows.Markup.XmlLanguage.GetLanguage("he-IL");
+
             var document = new FlowDocument
             {
                 FlowDirection = FlowDirection.RightToLeft,
+                Language = hebrew,
                 FontFamily = new FontFamily("Segoe UI"),
                 FontSize = 13,
                 PagePadding = new Thickness(0),
@@ -133,8 +154,11 @@ namespace HebrewTaskbarWidget
                 if (hashCount > 0 && hashCount < trimmedStart.Length && trimmedStart[hashCount] == ' ')
                 {
                     string headingText = trimmedStart.Substring(hashCount + 1).Trim();
-                    document.Blocks.Add(new Paragraph(new Run(headingText))
+                    document.Blocks.Add(new Paragraph(new Run(Rlm + headingText) { FlowDirection = FlowDirection.RightToLeft, Language = hebrew })
                     {
+                        FlowDirection = FlowDirection.RightToLeft,
+                        TextAlignment = TextAlignment.Right,
+                        Language = hebrew,
                         FontWeight = FontWeights.Bold,
                         FontSize = hashCount <= 2 ? 15.5 : 13.5,
                         Foreground = accentBrush,
@@ -154,6 +178,8 @@ namespace HebrewTaskbarWidget
                     {
                         currentList = new List
                         {
+                            FlowDirection = FlowDirection.RightToLeft,
+                            Language = hebrew,
                             MarkerStyle = TextMarkerStyle.Disc,
                             Margin = new Thickness(0, 2, 0, 8),
                             Padding = new Thickness(22, 0, 0, 0),
@@ -161,13 +187,29 @@ namespace HebrewTaskbarWidget
                         document.Blocks.Add(currentList);
                     }
 
-                    currentList.ListItems.Add(new ListItem(new Paragraph(new Run(bulletText)) { Margin = new Thickness(0) }));
+                    currentList.ListItems.Add(new ListItem(new Paragraph(new Run(Rlm + bulletText) { FlowDirection = FlowDirection.RightToLeft, Language = hebrew })
+                    {
+                        FlowDirection = FlowDirection.RightToLeft,
+                        TextAlignment = TextAlignment.Right,
+                        Language = hebrew,
+                        Margin = new Thickness(0),
+                    })
+                    {
+                        FlowDirection = FlowDirection.RightToLeft,
+                        Language = hebrew,
+                    });
                     continue;
                 }
 
                 // פסקה רגילה
                 currentList = null;
-                document.Blocks.Add(new Paragraph(new Run(trimmedStart)) { Margin = new Thickness(0, 2, 0, 2) });
+                document.Blocks.Add(new Paragraph(new Run(Rlm + trimmedStart) { FlowDirection = FlowDirection.RightToLeft, Language = hebrew })
+                {
+                    FlowDirection = FlowDirection.RightToLeft,
+                    TextAlignment = TextAlignment.Right,
+                    Language = hebrew,
+                    Margin = new Thickness(0, 2, 0, 2),
+                });
             }
 
             return document;

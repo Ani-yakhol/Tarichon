@@ -191,7 +191,7 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <TextBlock Text="הזמנים משוערים לפי חישוב אסטרונומי; לשימוש הלכתי למעשה יש להיוועץ ברב מוסמך."
+            <TextBlock Text="הזמנים משוערים לפי חישוב אסטרונומי, אין לסמוך על הזמנים להלכה למעשה."
                        Foreground="{DynamicResource PopupMutedTextBrush}" FontSize="9.5" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,0" />
         </StackPanel>
     </Border>

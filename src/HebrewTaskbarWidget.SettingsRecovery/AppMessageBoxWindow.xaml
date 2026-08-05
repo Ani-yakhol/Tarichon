@@ -132,6 +132,7 @@
                      ונכון (כולל הזחה תלויה לשורות עטופות) - בניגוד ל-
                      TextBlock פשוט, שאין לו מושג "פסקה"/"פריט רשימה" בכלל. -->
                 <FlowDocumentScrollViewer x:Name="MessageFlowViewer" Margin="0,14,0,0"
+                                          FlowDirection="RightToLeft"
                                           VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                           Visibility="Collapsed" Padding="0" />
             </StackPanel>

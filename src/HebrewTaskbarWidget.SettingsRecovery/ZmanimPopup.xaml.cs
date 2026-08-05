@@ -179,8 +179,11 @@ namespace HebrewTaskbarWidget
         }
 
         /// <summary>
-        /// ממקמת את חלונית הפופ-אפ מעל הוידג'ט הראשי, ממורכזת אופקית ביחסו,
-        /// כפי שמקובל בפופ-אפים הנפתחים משורת המשימות של Windows.
+        /// ממקמת את חלונית הפופ-אפ מעל הוידג'ט הראשי, לפי יישור אופקי הנבחר
+        /// בהגדרות (SettingsService.Current.ZmanimPopupAlignment - "כללי",
+        /// ההגדרה הראשונה בלשונית): ממורכז (ברירת המחדל, כפי שהיה עד כה),
+        /// קצה ימין מיושר עם קצה ימין הוידג'ט, או קצה שמאל מיושר עם קצה
+        /// שמאל הוידג'ט.
         /// </summary>
         public void PositionAboveWidget(double widgetLeft, double widgetTop, double widgetWidth)
         {
@@ -196,10 +199,21 @@ namespace HebrewTaskbarWidget
 
             const double gap = 6.0;
 
-            Left = widgetLeft + (widgetWidth / 2.0) - (popupWidth / 2.0);
+            Left = ComputeLeft(popupWidth);
             Top = widgetTop - popupHeight - gap;
 
             _positioned = true;
+        }
+
+        /// <summary>מחשבת את מיקום ה-Left הרצוי לפי יישור ההגדרה הנוכחית - ראו הערה ב-PositionAboveWidget.</summary>
+        private double ComputeLeft(double popupWidth)
+        {
+            return SettingsService.Current.ZmanimPopupAlignment switch
+            {
+                ZmanimPopupAlignment.RightEdge => _widgetLeft + _widgetWidth - popupWidth,
+                ZmanimPopupAlignment.LeftEdge => _widgetLeft,
+                _ => _widgetLeft + (_widgetWidth / 2.0) - (popupWidth / 2.0),
+            };
         }
 
         /// <summary>
@@ -220,7 +234,7 @@ namespace HebrewTaskbarWidget
 
             const double gap = 6.0;
 
-            Left = _widgetLeft + (_widgetWidth / 2.0) - (popupWidth / 2.0);
+            Left = ComputeLeft(popupWidth);
             Top = _widgetTop - popupHeight - gap;
         }
 

@@ -188,7 +188,7 @@ namespace HebrewTaskbarWidget
                 MainTabControl.SelectedIndex = initialTabIndex;
             }
 
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.4";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.5";
             AboutVersionText.Text = $"תאריכון - גרסה {version}";
         }
 
@@ -236,6 +236,7 @@ namespace HebrewTaskbarWidget
                 FontSize = source.FontSize,
                 UseCustomTextColor = source.UseCustomTextColor,
                 CustomTextColorHex = source.CustomTextColorHex,
+                ZmanimPopupAlignment = source.ZmanimPopupAlignment,
                 StartWithWindows = source.StartWithWindows,
                 CheckForUpdates = source.CheckForUpdates,
                 HideWindowsClock = source.HideWindowsClock,
@@ -691,6 +692,7 @@ namespace HebrewTaskbarWidget
             // הערה: קריאת המצב האמיתי של הפעלה אוטומטית נעשית מה-Registry
             // עצמו (StartupService.IsEnabled) ולא מה-JSON, כדי לשקף נכון גם
             // אם מישהו שינה זאת מחוץ לאפליקציה.
+            ZmanimPopupAlignmentComboBox.SelectedIndex = (int)s.ZmanimPopupAlignment;
             StartWithWindowsCheckBox.IsChecked = StartupService.IsEnabled();
             CheckForUpdatesCheckBox.IsChecked = s.CheckForUpdates;
             RefreshUpdateUi();
@@ -2133,6 +2135,7 @@ namespace HebrewTaskbarWidget
                 CustomTextColorHex = TextColorPicker.SelectedColorHex,
 
                 // --- הפעלה אוטומטית / הסתרת תצוגה מקורית / שעון לועזי משולב ---
+                ZmanimPopupAlignment = (ZmanimPopupAlignment)ZmanimPopupAlignmentComboBox.SelectedIndex,
                 StartWithWindows = StartWithWindowsCheckBox.IsChecked == true,
                 CheckForUpdates = CheckForUpdatesCheckBox.IsChecked == true,
                 HideWindowsClock = HideWindowsClockCheckBox.IsChecked == true,

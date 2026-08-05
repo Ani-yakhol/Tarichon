@@ -68,6 +68,19 @@ namespace HebrewTaskbarWidget.Models
         AtTzeitHakochavim,
     }
 
+    /// <summary>איך לוח הזמנים (ZmanimPopup) ממוקם אופקית ביחס לוידג'ט כשהוא נפתח.</summary>
+    public enum ZmanimPopupAlignment
+    {
+        /// <summary>ברירת המחדל: ממורכז מעל הוידג'ט.</summary>
+        Center,
+
+        /// <summary>קצה ימין של הלוח מיושר בקו אחד עם קצה ימין של הוידג'ט.</summary>
+        RightEdge,
+
+        /// <summary>קצה שמאל של הלוח מיושר בקו אחד עם קצה שמאל של הוידג'ט.</summary>
+        LeftEdge,
+    }
+
     /// <summary>
     /// התאמה אישית (גופן/גודל/צבע) לפריט בודד בתצוגה החופשית מעל שולחן
     /// העבודה - חלק מ"הגדרות מתקדמות" (מתקפל, סגור כברירת מחדל). כאשר
@@ -177,6 +190,8 @@ namespace HebrewTaskbarWidget.Models
         /// <summary>מתג-על: האם להציג את הוידג'ט בכלל בשורת המשימות. ברירת מחדל: מוצג. כשכבוי, שאר התוכנה (למשל התראות זמנים) ממשיכה לפעול כרגיל - רק התצוגה החזותית מוסתרת.</summary>
         public bool ShowWidget { get; set; } = true;
         public WidgetPositionMode PositionMode { get; set; } = WidgetPositionMode.ChevronAttached;
+        /// <summary>איך לוח הזמנים ממוקם אופקית ביחס לוידג'ט כשהוא נפתח (מיקום וזמנים, לשונית "כללי").</summary>
+        public ZmanimPopupAlignment ZmanimPopupAlignment { get; set; } = ZmanimPopupAlignment.Center;
 
         // --- מצב "מרחק מותאם אישית מקצה שורת המשימות" (WidgetPositionMode.CustomEdgeOffset) ---
         public WidgetAttachSide CustomOffsetSide { get; set; } = WidgetAttachSide.Left;

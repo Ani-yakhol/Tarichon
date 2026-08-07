@@ -36,13 +36,16 @@ namespace HebrewTaskbarWidget.Services
             IReadOnlyList<ZmanEntry> entries = ZmanimCalendar.Calculate(
                 today, location,
                 SettingsService.Current.CandleLightingMinutesBeforeSunset,
-                SettingsService.Current.TzeitHakochavimMinutesAfterSunset);
+                SettingsService.Current.TzeitHakochavimMinutesAfterSunset,
+                SettingsService.Current.DefaultZmanCalculationMethod,
+                SettingsService.Current.ZmanCustomizations,
+                SettingsService.Current.ZmanDuplicateRows);
 
             string relevantZmanName = settings.HebrewDayChangeMode == HebrewDayChangeMode.AtTzeitHakochavim
                 ? ZmanimCalendar.NameTzeitHakochavim
                 : ZmanimCalendar.NameShkia;
 
-            ZmanEntry? relevantZman = entries.FirstOrDefault(z => z.Name == relevantZmanName);
+            ZmanEntry? relevantZman = entries.FirstOrDefault(z => z.Key == relevantZmanName);
 
             if (relevantZman?.Time is DateTime relevantTime && now >= relevantTime)
             {

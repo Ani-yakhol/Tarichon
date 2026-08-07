@@ -380,7 +380,7 @@
 
             <!-- טאב 2: הוידג'ט בשורת המשימות -->
             <TabItem Header="הוידג'ט">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10" PreviewMouseWheel="TabScrollViewer_PreviewMouseWheel">
                     <StackPanel>
                         <CheckBox x:Name="ShowWidgetCheckBox" Content="הצג את הוידג'ט בשורת המשימות" Margin="0,0,0,14" />
 
@@ -463,6 +463,14 @@
                             <CheckBox x:Name="ShowHolidaySeparatorCheckBox" Content="הצג קו מפריד לצד חלק החג" Margin="0,6,0,0" />
                         </StackPanel>
 
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="מיקום לוח הזמנים" Margin="0,16,0,4" />
+                        <ComboBox x:Name="ZmanimPopupAlignmentComboBox" HorizontalAlignment="Left" MinWidth="220">
+                            <ComboBoxItem Content="אוטומטי - ברירת מחדל" />
+                            <ComboBoxItem Content="ממורכז מעל הוידג'ט" />
+                            <ComboBoxItem Content="קצה ימין מיושר עם קצה ימין הוידג'ט" />
+                            <ComboBoxItem Content="קצה שמאל מיושר עם קצה שמאל הוידג'ט" />
+                        </ComboBox>
+
                         <TextBlock Style="{StaticResource SectionHeader}" Text="גופן וצבע טקסט" />
                         <CheckBox x:Name="UseCustomFontCheckBox" Content="גופן וגודל מותאמים אישית (במקום חיקוי השעון של Windows)" Checked="UseCustomFontCheckBox_CheckedChanged" Unchecked="UseCustomFontCheckBox_CheckedChanged" />
                         <Grid Margin="18,2,0,0">
@@ -499,7 +507,7 @@
 
             <!-- טאב 3: מיקום וזמני היום -->
             <TabItem Header="מיקום וזמנים">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10" PreviewMouseWheel="TabScrollViewer_PreviewMouseWheel">
                     <StackPanel>
                         <TextBlock Style="{StaticResource SectionHeader}" Text="תאריך ושעה" Margin="0,0,0,4" />
                         <TextBlock Style="{StaticResource DescriptionText}"
@@ -578,6 +586,12 @@
                         <TextBlock Style="{StaticResource DescriptionText}" Margin="0,10,0,0"
                                    Text="הזמנים משוערים לפי חישוב אסטרונומי; לשימוש הלכתי למעשה יש להיוועץ ברב מוסמך." />
 
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="שיטת חישוב עלות השחר/צאת הכוכבים" Margin="0,16,0,4" />
+                        <ComboBox x:Name="ZmanCalculationMethodComboBox" HorizontalAlignment="Left" MinWidth="280">
+                            <ComboBoxItem Content="רגילה (זווית שמש) - ברירת מחדל" />
+                            <ComboBoxItem Content="72 דקות זמניות" />
+                        </ComboBox>
+
                         <TextBlock Style="{StaticResource SectionHeader}" Text="אילו זמנים להציג" Margin="0,16,0,4" />
                         <TextBlock Style="{StaticResource DescriptionText}"
                                    Text="קובע אילו זמנים יופיעו בלוח הזמנים (הפופ-אפ) וברשימות הבחירה בלשונית התראות - בברירת מחדל הכל מסומן." />
@@ -595,7 +609,7 @@
 
             <!-- טאב 4: התראות -->
             <TabItem Header="התראות">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10" PreviewMouseWheel="TabScrollViewer_PreviewMouseWheel">
                     <StackPanel>
                         <CheckBox x:Name="NotificationsEnabledCheckBox" Content="הפעל התראות על זמני היום" Checked="NotificationsEnabledCheckBox_CheckedChanged" Unchecked="NotificationsEnabledCheckBox_CheckedChanged" />
 
@@ -754,7 +768,7 @@
 
             <!-- טאב 5: תצוגה על שולחן העבודה -->
             <TabItem Header="שולחן עבודה">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10" PreviewMouseWheel="TabScrollViewer_PreviewMouseWheel">
                     <StackPanel>
                         <CheckBox x:Name="OverlayEnabledCheckBox" Content="הצג את פרטי היום גם מעל שולחן העבודה" Checked="OverlayEnabledCheckBox_CheckedChanged" Unchecked="OverlayEnabledCheckBox_CheckedChanged" />
 
@@ -904,16 +918,9 @@
 
             <!-- טאב 6: אודות -->
             <TabItem Header="כללי">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10" PreviewMouseWheel="TabScrollViewer_PreviewMouseWheel">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="מיקום לוח הזמנים" Margin="0,0,0,4" />
-                        <ComboBox x:Name="ZmanimPopupAlignmentComboBox" HorizontalAlignment="Left" MinWidth="220">
-                            <ComboBoxItem Content="ממורכז מעל הוידג'ט - ברירת מחדל" />
-                            <ComboBoxItem Content="קצה ימין מיושר עם קצה ימין הוידג'ט" />
-                            <ComboBoxItem Content="קצה שמאל מיושר עם קצה שמאל הוידג'ט" />
-                        </ComboBox>
-
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="הפעלה אוטומטית" Margin="0,16,0,4" />
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="הפעלה אוטומטית" Margin="0,0,0,4" />
                         <CheckBox x:Name="StartWithWindowsCheckBox" Content="הפעל את התוכנה אוטומטית עם עליית Windows" />
 
                         <TextBlock Style="{StaticResource SectionHeader}" Text="מראה פאנל ההגדרות" Margin="0,16,0,4" />
@@ -953,6 +960,7 @@
                     <TextBlock Text="תאריכון - וידג'ט תאריך עברי לשורת המשימות" TextAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" />
                     <TextBlock Text="מציג את התאריך העברי, היום בשבוע ופרשת השבוע, צמוד לשעון המערכת, ומאפשר צפייה בזמני היום ההלכתיים." TextAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="11.5" />
                     <TextBlock Text="נתוני פרשת השבוע: Hebcal.com (רישיון CC BY 4.0)" TextAlignment="Center" Margin="0,10,0,0" FontSize="10.5" Foreground="{DynamicResource SecondaryForegroundBrush}" />
+                    <TextBlock Text="חישוב זמנים (KosherJava): Yitzchok/Zmanim, מאת אליהו הרשפלד (רישיון LGPL 2.1)" TextAlignment="Center" Margin="0,4,0,0" FontSize="10.5" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryForegroundBrush}" />
                     <TextBlock TextAlignment="Center" Margin="0,10,0,0" FontSize="11">
                         <Hyperlink x:Name="AboutGitHubLink" Click="AboutGitHubLink_Click">מקור התוכנה ב-GitHub</Hyperlink>
                     </TextBlock>

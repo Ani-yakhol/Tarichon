@@ -105,8 +105,15 @@ namespace HebrewTaskbarWidget.Services
         }
 
         /// <summary>משמיע צליל עבור כלל התראה "מתקדם" - קובץ נבחר גובר על הצליל הקבוע.</summary>
-        /// <summary>משמיע צליל עבור כלל התראה "מתקדם" - לפי SoundSource (הקראה קולית / קובץ נבחר / צליל קבוע), באותה סדר-עדיפות בדיוק כמו PlayForZman.</summary>
-        public static void PlayForAdvancedRule(AdvancedNotificationRule rule, DateTime? zmanTime = null)
+        /// <summary>
+        /// משמיע צליל עבור כלל התראה "מתקדם" - לפי SoundSource (הקראה קולית /
+        /// קובץ נבחר / צליל קבוע), באותה סדר-עדיפות בדיוק כמו PlayForZman.
+        /// voiceKey (ברירת מחדל: rule.ZmanName) - השם הקנוני להשתמש בו
+        /// בפועל להכרזה הקולית; חשוב להעביר את ZmanEntry.VoiceKey של הקורא
+        /// (לא rule.ZmanName ישירות) עבור שורת "זמן כפול", שבה rule.ZmanName
+        /// הוא מזהה GUID פנימי בלבד, לא שם זמן קנוני שיש לו קובץ הקלטה.
+        /// </summary>
+        public static void PlayForAdvancedRule(AdvancedNotificationRule rule, DateTime? zmanTime = null, string? voiceKey = null)
         {
             if (!rule.PlaySound)
             {
@@ -116,7 +123,7 @@ namespace HebrewTaskbarWidget.Services
             switch (rule.SoundSource)
             {
                 case NotificationSoundSourceMode.Voice:
-                    VoiceAnnouncementService.Play(rule.ZmanName, rule.MinutesBefore, rule.VoiceKitFolderName, zmanTime);
+                    VoiceAnnouncementService.Play(voiceKey ?? rule.ZmanName, rule.MinutesBefore, rule.VoiceKitFolderName, zmanTime);
                     break;
 
                 case NotificationSoundSourceMode.CustomFile:

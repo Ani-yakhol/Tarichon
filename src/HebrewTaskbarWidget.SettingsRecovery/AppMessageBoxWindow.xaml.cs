@@ -32,7 +32,7 @@ namespace HebrewTaskbarWidget
 
         private bool _isLargeScrollable;
 
-        private AppMessageBoxWindow(string text, string caption, MessageBoxButton button, MessageBoxImage icon, Window? owner, bool largeScrollable)
+        private AppMessageBoxWindow(string text, string caption, MessageBoxButton button, MessageBoxImage icon, Window? owner, bool largeScrollable, string? extraButtonText = null)
         {
             InitializeComponent();
 
@@ -82,7 +82,7 @@ namespace HebrewTaskbarWidget
                 MessageTextBlock.Text = text;
             }
 
-            BuildButtons(button);
+            BuildButtons(button, extraButtonText);
             ApplyTheme(SettingsService.Current.SettingsPanelDarkMode);
         }
 
@@ -229,9 +229,10 @@ namespace HebrewTaskbarWidget
             MessageBoxButton button = MessageBoxButton.OK,
             MessageBoxImage icon = MessageBoxImage.None,
             Window? owner = null,
-            bool largeScrollable = false)
+            bool largeScrollable = false,
+            string? extraButtonText = null)
         {
-            var dialog = new AppMessageBoxWindow(text, caption, button, icon, owner, largeScrollable);
+            var dialog = new AppMessageBoxWindow(text, caption, button, icon, owner, largeScrollable, extraButtonText);
             dialog.ShowDialog();
             return dialog._result;
         }
@@ -248,7 +249,7 @@ namespace HebrewTaskbarWidget
             };
         }
 
-        private void BuildButtons(MessageBoxButton button)
+        private void BuildButtons(MessageBoxButton button, string? extraButtonText = null)
         {
             ButtonsPanel.Children.Clear();
 
@@ -262,6 +263,16 @@ namespace HebrewTaskbarWidget
                 case MessageBoxButton.YesNo:
                     AddButton("כן", MessageBoxResult.Yes, primary: true);
                     AddButton("לא", MessageBoxResult.No, primary: false);
+
+                    // extraButtonText: כפתור שלישי אופציונלי (למשל "מה חדש"
+                    // בהודעת "עדכון תוכנה זמין") - משתמש ב-MessageBoxResult.Cancel
+                    // כערך ה"אות" שלו, כי אינו בשימוש כלל במצב YesNo הרגיל,
+                    // כך שאין דו-משמעות מול הכן/לא האמיתיים.
+                    if (!string.IsNullOrWhiteSpace(extraButtonText))
+                    {
+                        AddButton(extraButtonText, MessageBoxResult.Cancel, primary: false);
+                    }
+
                     break;
 
                 case MessageBoxButton.YesNoCancel:

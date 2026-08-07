@@ -45,9 +45,14 @@ namespace HebrewTaskbarWidget
         private int _dragStartWindowLeftPhysical;
         private int _dragStartWindowTopPhysical;
 
-        public DesktopOverlayWindow()
+        /// <summary>נקרא כשנבחר "הגדרות..." בתפריט ההקשר של התצוגה (ראו BuildContextMenu) - פותח את פאנל ההגדרות ישירות ללשונית "שולחן עבודה".</summary>
+        private readonly Action _openSettingsToDesktopTab;
+
+        public DesktopOverlayWindow(Action openSettingsToDesktopTab)
         {
             InitializeComponent();
+
+            _openSettingsToDesktopTab = openSettingsToDesktopTab;
 
             _contentTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = ContentInterval };
             _contentTimer.Tick += (_, _) => RefreshContent();
@@ -100,9 +105,79 @@ namespace HebrewTaskbarWidget
                     OnRawLeftButtonUp();
                     handled = true;
                     break;
+
+                case NativeMethods.WM_RBUTTONUP:
+                    OnRawRightButtonUp(hwnd, lParam);
+                    handled = true;
+                    break;
             }
 
             return IntPtr.Zero;
+        }
+
+        /// <summary>
+        /// לחיצה ימנית פותחת תפריט הקשר (הגדרות/כיבוי/אודות) - **רק** כשCtrl
+        /// מוחזק, בדיוק כמו הגרירה (Ctrl + גרירה שמאלית) הקיימת - שתי
+        /// הפעולות "האמיתיות" על התצוגה החופשית דורשות Ctrl בכוונה, כי
+        /// היא שקופה ללחיצות כברירת מחדל (כדי לא להפריע לעבודה רגילה על
+        /// שולחן העבודה מתחתיה) - בלי Ctrl, הלחיצה הימנית פשוט "עוברת דרך"
+        /// התצוגה אל מה שמתחתיה (כמו תמיד), ואף פעם לא מגיעה לכאן בכלל.
+        /// </summary>
+        private void OnRawRightButtonUp(IntPtr hwnd, IntPtr lParam)
+        {
+            if ((NativeMethods.GetKeyState(NativeMethods.VK_CONTROL) & 0x8000) == 0)
+            {
+                return;
+            }
+
+            long raw = lParam.ToInt64();
+            int x = unchecked((short)(raw & 0xFFFF));
+            int y = unchecked((short)((raw >> 16) & 0xFFFF));
+            var point = new NativeMethods.POINT { X = x, Y = y };
+            NativeMethods.ClientToScreen(hwnd, ref point);
+
+            ShowContextMenu(point.X, point.Y);
+        }
+
+        /// <summary>בונה ומציגה את תפריט ההקשר של התצוגה החופשית - זהה ברוחו לתפריט ההקשר של הוידג'ט בשורת המשימות (הגדרות/אודות), עם "כיבוי" ייעודי לתצוגה הזו בלבד.</summary>
+        private void ShowContextMenu(int screenXPhysical, int screenYPhysical)
+        {
+            var menu = new ContextMenu { FlowDirection = FlowDirection.RightToLeft };
+
+            var settingsItem = new MenuItem { Header = "הגדרות..." };
+            settingsItem.Click += (_, _) => _openSettingsToDesktopTab();
+            menu.Items.Add(settingsItem);
+
+            var disableItem = new MenuItem { Header = "כיבוי" };
+            disableItem.Click += (_, _) =>
+            {
+                AppSettings settings = SettingsService.Current;
+                settings.OverlayEnabled = false;
+                SettingsService.Save(settings);
+            };
+            menu.Items.Add(disableItem);
+
+            menu.Items.Add(new Separator());
+
+            var aboutItem = new MenuItem { Header = "אודות" };
+            aboutItem.Click += (_, _) => AboutDialogHelper.Show(this);
+            menu.Items.Add(aboutItem);
+
+            // ה-Popup של ContextMenu ממוקם ביחס לפינה הימנית-עליונה של החלון
+            // (Placement=Absolute) - לא ביחס לעכבר ישירות; ממירים את נקודת
+            // המסך הפיזית לקואורדינטות DIP יחסיות לחלון הזה, כדי שהתפריט
+            // ייפתח בדיוק במקום שבו לחצו, לא בפינת המסך.
+            double dpiScale = TaskbarClockLocator.GetTaskbarDpiScale();
+            if (dpiScale <= 0)
+            {
+                dpiScale = 1.0;
+            }
+
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Absolute;
+            menu.PlacementTarget = this;
+            menu.HorizontalOffset = (screenXPhysical / dpiScale) - Left;
+            menu.VerticalOffset = (screenYPhysical / dpiScale) - Top;
+            menu.IsOpen = true;
         }
 
         /// <summary>

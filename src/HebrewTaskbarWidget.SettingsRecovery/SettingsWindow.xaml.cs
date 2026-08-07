@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using HebrewTaskbarWidget.Controls;
@@ -106,6 +107,9 @@ namespace HebrewTaskbarWidget
         /// <summary>אינדקס לשונית "התראות" - לשימוש בקפיצה ישירה אליה, למשל מהתפריט הראשי. אם סדר הלשוניות ב-XAML משתנה, יש לעדכן כאן בהתאם.</summary>
         public const int NotificationsTabIndex = 2;
 
+        /// <summary>אינדקס לשונית "שולחן עבודה" - לשימוש בקפיצה ישירה אליה, למשל מתפריט ההקשר של תצוגת שולחן העבודה עצמה. אם סדר הלשוניות ב-XAML משתנה, יש לעדכן כאן בהתאם.</summary>
+        public const int DesktopTabIndex = 3;
+
         /// <summary>צבע רקע קבוע למצב כהה בפאנל ההגדרות (ובחלוניות ההודעה) - לא ניתן יותר לבחירה אישית ע"י המשתמש.</summary>
         private const string DefaultDarkBackgroundHex = "#1B1C1F";
 
@@ -176,8 +180,11 @@ namespace HebrewTaskbarWidget
             // עובדים על עותק, כדי שלחיצה על "ביטול" לא תשאיר שינויים חלקיים.
             _working = CloneSettings(SettingsService.Current);
 
-            BuildZmanRulesPanel();
-            BuildZmanVisibilityPanel();
+            // אין צורך לבנות את שתי הרשימות (BuildZmanRulesPanel/BuildZmanVisibilityPanel)
+            // כאן בנפרד - LoadFromSettings (למטה) כבר בונה את שתיהן מחדש עם
+            // הנתונים האמיתיים שנטענים ממנה; קריאה נפרדת כאן הייתה רק
+            // מיותרת (מוחלפת מיד), ואף עלולה להסתמך על ZmanCalculationMethodComboBox
+            // לפני שהוא אותחל.
             LoadFromSettings(_working);
 
             TimeMaskTextBoxBehavior.Attach(ManualTimeTextBox);
@@ -188,7 +195,7 @@ namespace HebrewTaskbarWidget
                 MainTabControl.SelectedIndex = initialTabIndex;
             }
 
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.5";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.7.0";
             AboutVersionText.Text = $"תאריכון - גרסה {version}";
         }
 
@@ -263,6 +270,20 @@ namespace HebrewTaskbarWidget
                 HebrewDayChangeMode = source.HebrewDayChangeMode,
                 CandleLightingMinutesBeforeSunset = source.CandleLightingMinutesBeforeSunset,
                 TzeitHakochavimMinutesAfterSunset = source.TzeitHakochavimMinutesAfterSunset,
+                DefaultZmanCalculationMethod = source.DefaultZmanCalculationMethod,
+                ZmanCustomizations = source.ZmanCustomizations.Select(c => new ZmanCustomization
+                {
+                    BaseZmanName = c.BaseZmanName,
+                    CustomName = c.CustomName,
+                    MethodOverride = c.MethodOverride,
+                }).ToList(),
+                ZmanDuplicateRows = source.ZmanDuplicateRows.Select(d => new ZmanDuplicateRow
+                {
+                    Id = d.Id,
+                    BaseZmanName = d.BaseZmanName,
+                    CustomName = d.CustomName,
+                    Method = d.Method,
+                }).ToList(),
                 VisibleZmanNames = source.VisibleZmanNames is null ? null : new List<string>(source.VisibleZmanNames),
                 UseManualDateTime = source.UseManualDateTime,
                 ManualDateTimeBaseTicks = source.ManualDateTimeBaseTicks,
@@ -353,6 +374,27 @@ namespace HebrewTaskbarWidget
         /// כך שכל שאר הקוד (שמזהה "מותאם אישית" לפי אינדקס מחוץ לתחום המערך)
         /// ממשיך לעבוד בלי שינוי.
         /// </summary>
+        /// <summary>
+        /// מטפלת בגלילת עכבר/לוח-מגע בתוך לשוניות פאנל ההגדרות באופן ידני,
+        /// במקום להסתמך על הטיפול המובנה של ScrollViewer ב-WPF. הסיבה: לוחות
+        /// מגע מדוייקים (Windows Precision Touchpad, נפוצים במחשבים ניידים)
+        /// שולחים "הודעות גלילה" ברזולוציה גבוהה מאוד - delta קטן בהרבה
+        /// מה-120 הרגיל של גלגלת עכבר, בהמון אירועים תכופים - ותיעוד רשמי
+        /// של Microsoft ("Windows precision touchpad devices") מאשר שיישומים
+        /// שלא מטפלים בזה במפורש "may either over-scroll or not scroll
+        /// correctly". כאן מיישמים את הגלילה ידנית לפי e.Delta הגולמי (ולא
+        /// סתם מסמנים Handled ומקווים לטיפול המובנה) - כך שכל אירוע, קטן
+        /// כגדול, מתורגם ישירות לגלילה בפועל, ללא תלות ברזולוציית ה-delta.
+        /// </summary>
+        private void TabScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (sender is ScrollViewer scrollViewer)
+            {
+                scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - e.Delta);
+                e.Handled = true;
+            }
+        }
+
         private void BuildLocationPresetItems()
         {
             LocationPresetComboBox.Items.Clear();
@@ -370,13 +412,16 @@ namespace HebrewTaskbarWidget
         private const string SoundComboBrowseTag = "__browse__";
         private const string SoundComboFilePrefix = "file:";
 
-        /// <summary>בונה את שורות רשימת ההתראות הראשית (זמן + תיבת סימון + דקות-לפני + צליל מיוחד + נסוי) - שורה לכל זמן הלכתי אפשרי, מיושרות זו מתחת לזו באמצעות SharedSizeGroup על עמודת שם הזמן (ראו Grid.IsSharedSizeScope ב-XAML).</summary>
+        /// <summary>בונה את שורות רשימת ההתראות הראשית (זמן + תיבת סימון + דקות-לפני + צליל מיוחד + נסוי) - שורה לכל זמן גלוי כרגע (כולל שורות "זמן כפול", בשמן המוצג בפועל) לפי רשימת "אילו זמנים להציג" הנוכחית (החיה, לא בהכרח השמורה) - מיושרות זו מתחת לזו באמצעות SharedSizeGroup על עמודת שם הזמן (ראו Grid.IsSharedSizeScope ב-XAML).</summary>
         private void BuildZmanRulesPanel()
         {
             _zmanRuleRows.Clear();
             ZmanimRulesPanel.Children.Clear();
 
-            foreach (string name in Services.ZmanimCalendar.AllZmanNames.Where(SettingsService.Current.IsZmanVisible))
+            IEnumerable<Services.ZmanEntry> visibleEntries = ComputeZmanEntriesForSettingsUi()
+                .Where(entry => !_zmanVisibilityCheckBoxes.TryGetValue(entry.Key, out CheckBox? visibilityBox) || visibilityBox.IsChecked == true);
+
+            foreach (Services.ZmanEntry entry in visibleEntries)
             {
                 var grid = new Grid { Margin = new Thickness(0, 3, 0, 3) };
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, SharedSizeGroup = "ZmanNameCol" });
@@ -387,7 +432,7 @@ namespace HebrewTaskbarWidget
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-                var checkBox = new CheckBox { Content = name, VerticalAlignment = VerticalAlignment.Center };
+                var checkBox = new CheckBox { Content = entry.DisplayName, VerticalAlignment = VerticalAlignment.Center };
                 Grid.SetColumn(checkBox, 0);
 
                 var minutesBox = new TextBox
@@ -413,7 +458,7 @@ namespace HebrewTaskbarWidget
 
                 var row = new ZmanRuleRow
                 {
-                    ZmanName = name,
+                    ZmanName = entry.Key,
                     EnabledCheckBox = checkBox,
                     MinutesTextBox = minutesBox,
                     SoundComboBox = soundCombo,
@@ -436,55 +481,253 @@ namespace HebrewTaskbarWidget
             }
         }
 
-        /// <summary>מיפוי שם זמן -> תיבת הסימון שלו ברשימת "אילו זמנים להציג" (מיקום וזמנים) - נבנה פעם אחת ב-BuildZmanVisibilityPanel, נקרא בזמן טעינה/שמירה.</summary>
+        /// <summary>
+        /// בונה מחדש את שתי הרשימות התלויות בהגדרות הזמנים ("אילו זמנים
+        /// להציג" ורשימת ההתראות הראשית) יחד, תוך שמירה ושחזור של המצב
+        /// שהיה לכל שורה קיימת בכל אחת מהן (נראות; הפעלה/דקות-לפני/צליל
+        /// של התראה) - כדי שעריכת זמן אחד (שם/שיטה/כפילות) לא תאבד בטעות
+        /// הגדרות שהוגדרו לזמנים אחרים. יש לקרוא לזה בכל פעם שמשהו שמשפיע
+        /// על רשימת/שמות הזמנים משתנה (ראו OpenZmanEditDialog).
+        /// </summary>
+        private void RefreshZmanPanelsPreservingState()
+        {
+            var previousVisibility = _zmanVisibilityCheckBoxes.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.IsChecked == true);
+            var previousRules = _zmanRuleRows.ToDictionary(
+                r => r.ZmanName,
+                r =>
+                {
+                    (string? path, string? fixedName) = ReadSoundComboSelection(r.SoundComboBox);
+                    return (Enabled: r.EnabledCheckBox.IsChecked == true, Minutes: r.MinutesTextBox.Text, SoundPath: path, SoundFixed: fixedName);
+                });
+
+            BuildZmanVisibilityPanel();
+            foreach ((string zmanKey, CheckBox refreshedCheckBox) in _zmanVisibilityCheckBoxes)
+            {
+                refreshedCheckBox.IsChecked = previousVisibility.TryGetValue(zmanKey, out bool wasVisible) ? wasVisible : true;
+            }
+
+            BuildZmanRulesPanel();
+            bool playSoundEnabled = NotificationPlaySoundCheckBox.IsChecked == true;
+            foreach (ZmanRuleRow row in _zmanRuleRows)
+            {
+                if (previousRules.TryGetValue(row.ZmanName, out var prev))
+                {
+                    row.EnabledCheckBox.IsChecked = prev.Enabled;
+                    row.MinutesTextBox.Text = prev.Minutes;
+                    row.MinutesTextBox.IsEnabled = prev.Enabled;
+                    row.TestToggle.IsEnabled = prev.Enabled;
+                    SetSoundComboSelection(row.SoundComboBox, prev.SoundPath, prev.SoundFixed);
+                }
+                else
+                {
+                    row.EnabledCheckBox.IsChecked = false;
+                    row.MinutesTextBox.Text = FormatMinutesAsHhMm(10);
+                    row.MinutesTextBox.IsEnabled = false;
+                    row.TestToggle.IsEnabled = false;
+                }
+
+                row.SoundComboBox.IsEnabled = playSoundEnabled;
+            }
+        }
+
+        /// <summary>מיפוי שם זמן -> תיבת הסימון שלו ברשימת "אילו זמנים להציג" (מיקום וזמנים) - נבנה מחדש בכל BuildZmanVisibilityPanel (כולל אחרי כל שינוי בחלונית עריכת זמן), נקרא בזמן טעינה/שמירה.</summary>
         private readonly Dictionary<string, CheckBox> _zmanVisibilityCheckBoxes = new();
 
-        /// <summary>תיבת ההזנה של "כמה דקות לפני השקיעה" עבור "הדלקת נרות" - נבנית דינמית יחד עם שאר השורות, ליד תיבת הסימון של אותו זמן ספציפית.</summary>
-        private TextBox? _candleLightingMinutesTextBox;
+        /// <summary>"כמה דקות לפני השקיעה" עבור "הדלקת נרות" - נערך דרך ZmanEditDialog (לא עוד תיבת הזנה ישירות בשורה) - ראו AppSettings.CandleLightingMinutesBeforeSunset.</summary>
+        private int _candleLightingMinutesBeforeSunset = 40;
+
+        /// <summary>"כמה דקות אחרי השקיעה" עבור "צאת הכוכבים" - null (ברירת המחדל) = לפי שיטת החישוב. נערך דרך ZmanEditDialog - ראו AppSettings.TzeitHakochavimMinutesAfterSunset.</summary>
+        private int? _tzeitMinutesAfterSunsetOverride;
+
+        /// <summary>התאמות אישיות (שם/שיטת חישוב) לזמנים בודדים, לפי השם הקנוני - נערכות דרך ZmanEditDialog. רק זמנים שיש להם התאמה בפועל מופיעים כאן.</summary>
+        private readonly Dictionary<string, ZmanCustomization> _zmanCustomizations = new();
+
+        /// <summary>שורות "זמן כפול" הקיימות כרגע - ראו AppSettings.ZmanDuplicateRow.</summary>
+        private readonly List<ZmanDuplicateRow> _zmanDuplicateRows = new();
 
         /// <summary>
-        /// תיבת ההזנה של "כמה דקות אחרי השקיעה" עבור "צאת הכוכבים" - נבנית
-        /// דינמית יחד עם שאר השורות. ריקה כברירת מחדל (null בהגדרות - ראו
-        /// AppSettings.TzeitHakochavimMinutesAfterSunset) - כלומר ממשיכים
-        /// להשתמש בחישוב המבוסס-מעלות הרגיל, בדיוק כמו עד כה.
+        /// בונה את רשימת "אילו זמנים להציג" בלשונית "מיקום וזמנים" - שורה
+        /// לכל זמן (כולל כל "שורת זמן כפולה" קיימת, ממוקמת בסמוך לזמן
+        /// הבסיסי שלה, לפי סדר כרונולוגי - המוקדם קודם) בדיוק כפי שהיא
+        /// תופיע בפועל בלוח הזמנים/בהתראות: תיבת סימון (נראות - פועלת
+        /// בדיוק אותו דבר לזמן רגיל ולשורה כפולה, לכל אחת התיבה שלה) וקישור
+        /// בשם הזמן שהקשה עליו פותחת את חלונית העריכה (ZmanEditDialog) -
+        /// לחיצה על שורה כפולה פותחת את אותה חלונית בדיוק כמו הבסיס שלה,
+        /// כי מדובר באותה הגדרה. גם מציגה את הזמן המחושב כרגע לצד כל שורה,
+        /// לשם התרשמות מיידית על ההבדל בין שיטות החישוב.
+        /// נקראת מחדש אחרי כל שינוי בחלונית העריכה, כדי לשקף שמות/כפילות/
+        /// זמנים מעודכנים מיד.
         /// </summary>
-        private TextBox? _tzeitMinutesTextBox;
-
-        /// <summary>בונה את רשימת "אילו זמנים להציג" בלשונית "מיקום וזמנים" - שורה לכל זמן אפשרי, עם השם המלא (כולל סיומת טכנית כמו "(16.1°)" אם יש) - בניגוד לפופ-אפ, כאן מוצג השם המדוייק לצורך בהירות הבחירה. ל"הדלקת נרות" ול"צאת הכוכבים" יש בנוסף תיבת הזנת דקות צמודה (לפני/אחרי השקיעה, בהתאמה).</summary>
         private void BuildZmanVisibilityPanel()
         {
             _zmanVisibilityCheckBoxes.Clear();
-            _candleLightingMinutesTextBox = null;
-            _tzeitMinutesTextBox = null;
             ZmanVisibilityPanel.Children.Clear();
 
-            foreach (string name in Services.ZmanimCalendar.AllZmanNames)
+            IReadOnlyList<Services.ZmanEntry> entries = ComputeZmanEntriesForSettingsUi();
+            var baseNamesSet = new HashSet<string>(Services.ZmanimCalendar.AllZmanNames);
+
+            foreach (Services.ZmanEntry entry in entries)
             {
+                bool isDuplicate = !baseNamesSet.Contains(entry.Key);
+                string dialogTargetKey = isDuplicate
+                    ? _zmanDuplicateRows.FirstOrDefault(d => d.Id == entry.Key)?.BaseZmanName ?? entry.Key
+                    : entry.Key;
+
                 var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 3, 0, 3) };
 
-                var checkBox = new CheckBox { Content = name, VerticalAlignment = VerticalAlignment.Center };
+                var checkBox = new CheckBox { VerticalAlignment = VerticalAlignment.Center, IsChecked = true };
                 row.Children.Add(checkBox);
-                _zmanVisibilityCheckBoxes[name] = checkBox;
+                _zmanVisibilityCheckBoxes[entry.Key] = checkBox;
 
-                if (name == Services.ZmanimCalendar.NameCandleLighting)
+                var nameText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
+                var nameLink = new System.Windows.Documents.Hyperlink(new System.Windows.Documents.Run(entry.DisplayName)) { Tag = dialogTargetKey };
+                nameLink.Click += ZmanNameLink_Click;
+                nameText.Inlines.Add(nameLink);
+                row.Children.Add(nameText);
+
+                var timeText = new TextBlock
                 {
-                    var minutesBox = new TextBox { Width = 45, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center, Margin = new Thickness(10, 0, 0, 0) };
-                    var suffixLabel = new TextBlock { Text = "דקות לפני השקיעה", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0), FontSize = 11 };
-                    row.Children.Add(minutesBox);
-                    row.Children.Add(suffixLabel);
-                    _candleLightingMinutesTextBox = minutesBox;
-                }
-                else if (name == Services.ZmanimCalendar.NameTzeitHakochavim)
-                {
-                    var minutesBox = new TextBox { Width = 45, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center, Margin = new Thickness(10, 0, 0, 0) };
-                    var suffixLabel = new TextBlock { Text = "דקות לאחר שקיעת החמה", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0), FontSize = 11 };
-                    row.Children.Add(minutesBox);
-                    row.Children.Add(suffixLabel);
-                    _tzeitMinutesTextBox = minutesBox;
-                }
+                    Text = entry.Time.HasValue ? AppTimeService.FormatZmanTime(entry.Time.Value) : "—",
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(8, 0, 0, 0),
+                    FontSize = 11,
+                    Foreground = (Brush)FindResource("SecondaryForegroundBrush"),
+                };
+                row.Children.Add(timeText);
 
                 ZmanVisibilityPanel.Children.Add(row);
             }
+        }
+
+        /// <summary>
+        /// מחשבת את רשימת הזמנים לתצוגה בפאנל ההגדרות (לשונית "מיקום וזמנים"
+        /// ולשונית "התראות") - עם forceIncludeCandleLighting כדי ש"הדלקת
+        /// נרות" תמיד תופיע ברשימות ההגדרות עצמן, לא רק בימים רלוונטיים
+        /// בפועל (בניגוד לתצוגת "היום" האמיתית - הפופ-אפ/התראות בפועל).
+        /// עטופה ב-try/catch: אם המיקום/ההגדרות עדיין לא תקינים (למשל
+        /// באמצע טעינה) פשוט מחזירה רשימה ריקה, במקום לזרוק שגיאה שתקריס
+        /// את פתיחת פאנל ההגדרות כולו.
+        /// </summary>
+        private IReadOnlyList<Services.ZmanEntry> ComputeZmanEntriesForSettingsUi()
+        {
+            try
+            {
+                var method = (ZmanCalculationMethod)ZmanCalculationMethodComboBox.SelectedIndex;
+                return Services.ZmanimCalendar.Calculate(
+                    AppTimeService.Today(), SettingsService.BuildLocation(),
+                    _candleLightingMinutesBeforeSunset, _tzeitMinutesAfterSunsetOverride,
+                    method, _zmanCustomizations.Values.ToList(), _zmanDuplicateRows,
+                    forceIncludeCandleLighting: true);
+            }
+            catch
+            {
+                return Array.Empty<Services.ZmanEntry>();
+            }
+        }
+
+        /// <summary>לחיצה על שם זמן (לא על תיבת הסימון!) פותחת את חלונית העריכה - ראו הערה מפורטת ב-BuildZmanVisibilityPanel.</summary>
+        private void ZmanNameLink_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Documents.Hyperlink { Tag: string baseZmanName })
+            {
+                OpenZmanEditDialog(baseZmanName);
+            }
+        }
+
+        /// <summary>
+        /// מחשבת מה יהיה הזמן של baseZmanName אם היה נדרס לשיטה method
+        /// ספציפית - לשימוש בתצוגת "זמן נוכחי" החיה בחלונית העריכה (ראו
+        /// ZmanEditDialog.ComputeTimeForMethod). מחשבת מחדש בכל קריאה (לא
+        /// יקר במיוחד - כמה קריאות טריגונומטריות - ורק בתגובה לאינטראקציה
+        /// של המשתמש, לא בלולאה חמה).
+        /// </summary>
+        private DateTime? ComputeZmanTimeForMethod(string baseZmanName, ZmanCalculationMethod method)
+        {
+            try
+            {
+                var testCustomizations = _zmanCustomizations.Values
+                    .Where(c => c.BaseZmanName != baseZmanName)
+                    .Append(new ZmanCustomization { BaseZmanName = baseZmanName, MethodOverride = method })
+                    .ToList();
+
+                IReadOnlyList<Services.ZmanEntry> testEntries = Services.ZmanimCalendar.Calculate(
+                    AppTimeService.Today(), SettingsService.BuildLocation(),
+                    _candleLightingMinutesBeforeSunset, _tzeitMinutesAfterSunsetOverride,
+                    (ZmanCalculationMethod)ZmanCalculationMethodComboBox.SelectedIndex,
+                    testCustomizations, Array.Empty<ZmanDuplicateRow>(),
+                    forceIncludeCandleLighting: true);
+
+                return testEntries.FirstOrDefault(e => e.Key == baseZmanName)?.Time;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private void OpenZmanEditDialog(string baseZmanName)
+        {
+            _zmanCustomizations.TryGetValue(baseZmanName, out ZmanCustomization? existingCustomization);
+            ZmanDuplicateRow? existingDuplicate = _zmanDuplicateRows.FirstOrDefault(d => d.BaseZmanName == baseZmanName);
+            var globalMethod = (ZmanCalculationMethod)ZmanCalculationMethodComboBox.SelectedIndex;
+
+            var dialog = new ZmanEditDialog(
+                baseZmanName,
+                existingCustomization?.CustomName,
+                existingCustomization?.MethodOverride,
+                _candleLightingMinutesBeforeSunset,
+                _tzeitMinutesAfterSunsetOverride,
+                existingDuplicate,
+                globalMethod,
+                m => ComputeZmanTimeForMethod(baseZmanName, m))
+            {
+                Owner = this,
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            if (baseZmanName == Services.ZmanimCalendar.NameCandleLighting)
+            {
+                _candleLightingMinutesBeforeSunset = dialog.ResultCandleLightingMinutes;
+            }
+            else if (baseZmanName == Services.ZmanimCalendar.NameTzeitHakochavim)
+            {
+                _tzeitMinutesAfterSunsetOverride = dialog.ResultTzeitMinutesOverride;
+            }
+
+            if (baseZmanName != Services.ZmanimCalendar.NameCandleLighting &&
+                (dialog.ResultCustomName is not null || dialog.ResultMethodOverride is not null))
+            {
+                _zmanCustomizations[baseZmanName] = new ZmanCustomization
+                {
+                    BaseZmanName = baseZmanName,
+                    CustomName = dialog.ResultCustomName,
+                    MethodOverride = dialog.ResultMethodOverride,
+                };
+            }
+            else if (baseZmanName == Services.ZmanimCalendar.NameCandleLighting && dialog.ResultCustomName is not null)
+            {
+                _zmanCustomizations[baseZmanName] = new ZmanCustomization { BaseZmanName = baseZmanName, CustomName = dialog.ResultCustomName };
+            }
+            else
+            {
+                _zmanCustomizations.Remove(baseZmanName);
+            }
+
+            _zmanDuplicateRows.RemoveAll(d => d.BaseZmanName == baseZmanName);
+            if (dialog.ResultDuplicateRow is not null)
+            {
+                _zmanDuplicateRows.Add(dialog.ResultDuplicateRow);
+            }
+
+            // BuildZmanVisibilityPanel יוצר תיבות-סימון חדשות (מ-Dictionary
+            // חדש) לכל השורות - שומרים את מצב הנראות שהיה לכולן לפני
+            // הפתיחה ומחזירים אותו לכולן, כדי שעריכת שם/שיטה לזמן אחד לא
+            // "תאפס" בטעות את הסימון של שאר הזמנים ברשימה.
+            RefreshZmanPanelsPreservingState();
         }
 
         /// <summary>ממלא תיבת בחירת צליל (בין אם בשורת זמן ובין אם בעורך ההתראה המתקדמת) באותה רשימת אפשרויות קבועה: ברירת מחדל/צליל קבוע/בחירת קובץ.</summary>
@@ -615,6 +858,8 @@ namespace HebrewTaskbarWidget
         {
             int minutesBefore = ParseHhMmToMinutes(row.MinutesTextBox.Text, 10);
             Services.ZmanEntry? entry = ResolveTestZmanEntry(row.ZmanName);
+            string voiceKey = entry?.VoiceKey ?? row.ZmanName;
+            string displayName = entry is not null ? Services.ZmanimCalendar.GetPopupDisplayName(entry) : row.ZmanName;
 
             Action? replaySound = null;
             if (NotificationPlaySoundCheckBox.IsChecked == true)
@@ -628,24 +873,22 @@ namespace HebrewTaskbarWidget
                     NotificationFixedSoundName = FixedSoundKeys[Math.Clamp(NotificationFixedSoundComboBox.SelectedIndex, 0, FixedSoundKeys.Length - 1)],
                     NotificationVoiceKitFolderName = (NotificationVoiceKitComboBox.SelectedItem as ComboBoxItem)?.Tag as string,
                 };
-                replaySound = () => NotificationSoundService.PlayForZman(previewSettings, path, fixedName, row.ZmanName, minutesBefore, entry?.Time);
+                replaySound = () => NotificationSoundService.PlayForZman(previewSettings, path, fixedName, voiceKey, minutesBefore, entry?.Time);
             }
 
-            ToastNotificationWindow.Show(row.ZmanName, minutesBefore, entry?.Time is DateTime t0 ? AppTimeService.FormatZmanTime(t0) : "--:--", isTest: true, zmanTime: entry?.Time, onSnoozeReplaySound: replaySound);
+            ToastNotificationWindow.Show(displayName, minutesBefore, entry?.Time is DateTime t0 ? AppTimeService.FormatZmanTime(t0) : "--:--", isTest: true, zmanTime: entry?.Time, onSnoozeReplaySound: replaySound);
 
             replaySound?.Invoke();
         }
 
-        /// <summary>מאתרת את הזמן המחושב היום עבור שם זמן נתון (לצורך "נסוי") - null אם לא ניתן היה לחשב אותו היום (למשל זמן שלא רלוונטי היום).</summary>
-        private static Services.ZmanEntry? ResolveTestZmanEntry(string zmanName)
+        /// <summary>מאתרת את הזמן המחושב היום עבור מפתח זמן נתון (לצורך "נסוי") - null אם לא ניתן היה לחשב אותו היום. משתמשת בנתוני העבודה החיים של החלונית (כולל התאמות אישיות/כפילות שעוד לא נשמרו), לא בהגדרות השמורות - כך שה"נסוי" תמיד משקף את המצב הנוכחי בפועל בפאנל.</summary>
+        private Services.ZmanEntry? ResolveTestZmanEntry(string zmanKey)
         {
-            GeoLocation location = SettingsService.BuildLocation();
-            IReadOnlyList<Services.ZmanEntry> entries = Services.ZmanimCalendar.Calculate(AppTimeService.Today(), location, SettingsService.Current.CandleLightingMinutesBeforeSunset, SettingsService.Current.TzeitHakochavimMinutesAfterSunset);
-            return entries.FirstOrDefault(z => z.Name == zmanName);
+            return ComputeZmanEntriesForSettingsUi().FirstOrDefault(z => z.Key == zmanKey);
         }
 
         /// <summary>מחשבת את שעת הזמן להיום לצורך תצוגת "נסוי" - "--:--" אם לא ניתן היה לחשב זמן זה היום (למשל זמן שלא רלוונטי היום).</summary>
-        private static string ResolveTestTimeText(string zmanName)
+        private string ResolveTestTimeText(string zmanName)
         {
             Services.ZmanEntry? entry = ResolveTestZmanEntry(zmanName);
             return entry?.Time is DateTime time ? AppTimeService.FormatZmanTime(time) : "--:--";
@@ -754,20 +997,49 @@ namespace HebrewTaskbarWidget
             HebrewDayChangeSunsetRadio.IsChecked = s.HebrewDayChangeMode == HebrewDayChangeMode.AtSunset;
             HebrewDayChangeTzeitRadio.IsChecked = s.HebrewDayChangeMode == HebrewDayChangeMode.AtTzeitHakochavim;
 
+            ZmanCalculationMethodComboBox.SelectedIndex = (int)s.DefaultZmanCalculationMethod;
+
+            // --- זמנים: התאמות אישיות/כפילות - נטענים *לפני* בניית הרשימה
+            // (BuildZmanVisibilityPanel), כדי שהיא תציג מיד שמות מותאמים
+            // אישית ושורות כפולות קיימות, לא רק את ברירת המחדל. --- 
+            _candleLightingMinutesBeforeSunset = s.CandleLightingMinutesBeforeSunset;
+            _tzeitMinutesAfterSunsetOverride = s.TzeitHakochavimMinutesAfterSunset;
+
+            _zmanCustomizations.Clear();
+            foreach (ZmanCustomization customization in s.ZmanCustomizations)
+            {
+                _zmanCustomizations[customization.BaseZmanName] = new ZmanCustomization
+                {
+                    BaseZmanName = customization.BaseZmanName,
+                    CustomName = customization.CustomName,
+                    MethodOverride = customization.MethodOverride,
+                };
+            }
+
+            _zmanDuplicateRows.Clear();
+            foreach (ZmanDuplicateRow duplicate in s.ZmanDuplicateRows)
+            {
+                _zmanDuplicateRows.Add(new ZmanDuplicateRow
+                {
+                    Id = duplicate.Id,
+                    BaseZmanName = duplicate.BaseZmanName,
+                    CustomName = duplicate.CustomName,
+                    Method = duplicate.Method,
+                });
+            }
+
+            BuildZmanVisibilityPanel();
+
             foreach ((string name, CheckBox checkBox) in _zmanVisibilityCheckBoxes)
             {
                 checkBox.IsChecked = s.IsZmanVisible(name);
             }
 
-            if (_candleLightingMinutesTextBox is not null)
-            {
-                _candleLightingMinutesTextBox.Text = s.CandleLightingMinutesBeforeSunset.ToString(CultureInfo.InvariantCulture);
-            }
-
-            if (_tzeitMinutesTextBox is not null)
-            {
-                _tzeitMinutesTextBox.Text = s.TzeitHakochavimMinutesAfterSunset?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
-            }
+            // חובה לבנות מחדש כאן (לא להסתפק בבנייה החד-פעמית שכבר קרתה
+            // בבנאי) - שם עדיין לא היו טעונים ההתאמות האישיות/הכפילות/
+            // מצב הנראות בפועל שזה עתה נטענו למעלה, כך שהרשימה הייתה
+            // משקפת מצב ריק/ברירת-מחדל בלבד.
+            BuildZmanRulesPanel();
 
             // --- התראות ---
             NotificationsEnabledCheckBox.IsChecked = s.NotificationsEnabled;
@@ -1195,19 +1467,7 @@ namespace HebrewTaskbarWidget
 
         private void WhatsNewButton_Click(object sender, RoutedEventArgs e)
         {
-            UpdateInfo? available = UpdateService.AvailableUpdate;
-            if (available is null || string.IsNullOrWhiteSpace(available.ReleaseNotes))
-            {
-                return;
-            }
-
-            AppMessageBoxWindow.Show(
-                available.ReleaseNotes,
-                $"מה חדש בגרסה {available.Version}",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information,
-                this,
-                largeScrollable: true);
+            AboutDialogHelper.ShowWhatsNew(this);
         }
 
 
@@ -1616,6 +1876,11 @@ namespace HebrewTaskbarWidget
                 return;
             }
 
+            // מיפוי מפתח -> שם תצוגה (משקף התאמות אישיות/כפילות עדכניות) -
+            // כדי שהשורה תציג את השם הנוכחי שהמשתמש רואה, לא את המפתח
+            // הקנוני/ה-GUID הפנימי (ראו ZmanEntry.Key מול DisplayName).
+            Dictionary<string, string> displayNameByKey = ComputeZmanEntriesForSettingsUi().ToDictionary(z => z.Key, z => z.DisplayName);
+
             foreach (AdvancedNotificationRule rule in _workingAdvancedRules)
             {
                 var row = new Grid { Margin = new Thickness(0, 3, 0, 3) };
@@ -1637,9 +1902,11 @@ namespace HebrewTaskbarWidget
 
                 string channels = channelParts.Count > 0 ? string.Join(" + ", channelParts) : "ללא תצוגה";
 
+                string ruleDisplayName = displayNameByKey.TryGetValue(rule.ZmanName, out string? resolvedName) ? resolvedName : rule.ZmanName;
+
                 var text = new TextBlock
                 {
-                    Text = $"{rule.ZmanName} · {FormatMinutesAsHhMm(rule.MinutesBefore)} לפני · {channels}" + (rule.Enabled ? string.Empty : " (כבוי)"),
+                    Text = $"{ruleDisplayName} · {FormatMinutesAsHhMm(rule.MinutesBefore)} לפני · {channels}" + (rule.Enabled ? string.Empty : " (כבוי)"),
                     VerticalAlignment = VerticalAlignment.Center,
                     Opacity = rule.Enabled ? 1.0 : 0.55,
                     TextTrimming = TextTrimming.CharacterEllipsis,
@@ -1734,12 +2001,25 @@ namespace HebrewTaskbarWidget
             AdvancedRuleEditorTitle.Text = existing is null ? "התראה חדשה" : "עריכת התראה";
 
             AdvancedRuleZmanComboBox.Items.Clear();
-            foreach (string name in Services.ZmanimCalendar.AllZmanNames)
+            var advancedRuleZmanEntries = ComputeZmanEntriesForSettingsUi();
+            foreach (Services.ZmanEntry entry in advancedRuleZmanEntries)
             {
-                AdvancedRuleZmanComboBox.Items.Add(new ComboBoxItem { Content = name });
+                AdvancedRuleZmanComboBox.Items.Add(new ComboBoxItem { Content = entry.DisplayName, Tag = entry.Key });
             }
 
-            int zmanIndex = existing is null ? -1 : Services.ZmanimCalendar.AllZmanNames.ToList().IndexOf(existing.ZmanName);
+            int zmanIndex = -1;
+            if (existing is not null)
+            {
+                for (int i = 0; i < advancedRuleZmanEntries.Count; i++)
+                {
+                    if (advancedRuleZmanEntries[i].Key == existing.ZmanName)
+                    {
+                        zmanIndex = i;
+                        break;
+                    }
+                }
+            }
+
             AdvancedRuleZmanComboBox.SelectedIndex = Math.Max(0, zmanIndex);
 
             AdvancedRuleMinutesTextBox.Text = FormatMinutesAsHhMm(existing?.MinutesBefore ?? 10);
@@ -1828,10 +2108,11 @@ namespace HebrewTaskbarWidget
                 return;
             }
 
-            string zmanName = (AdvancedRuleZmanComboBox.SelectedItem as ComboBoxItem)?.Content as string
+            string zmanName = (AdvancedRuleZmanComboBox.SelectedItem as ComboBoxItem)?.Tag as string
                 ?? Services.ZmanimCalendar.AllZmanNames[0];
             int minutesBefore = ParseHhMmToMinutes(AdvancedRuleMinutesTextBox.Text, 10);
             Services.ZmanEntry? testEntry = ResolveTestZmanEntry(zmanName);
+            string testDisplayName = testEntry is not null ? Services.ZmanimCalendar.GetPopupDisplayName(testEntry) : zmanName;
 
             Action? replaySound = null;
             if (AdvancedRulePlaySoundCheckBox.IsChecked == true)
@@ -1847,14 +2128,14 @@ namespace HebrewTaskbarWidget
                     ZmanName = zmanName,
                     MinutesBefore = minutesBefore,
                 };
-                replaySound = () => NotificationSoundService.PlayForAdvancedRule(testRule, testEntry?.Time);
+                replaySound = () => NotificationSoundService.PlayForAdvancedRule(testRule, testEntry?.Time, testEntry?.VoiceKey);
             }
 
             if (AdvancedRuleShowPopupCheckBox.IsChecked == true)
             {
                 double previewDuration = Math.Max(1, ParseDoubleOrDefault(AdvancedRuleToastDurationTextBox.Text, 15.0));
                 bool previewDark = AdvancedRuleToastBackgroundComboBox.SelectedIndex != 1;
-                ToastNotificationWindow.Show(zmanName, minutesBefore, ResolveTestTimeText(zmanName), isTest: true, previewDuration, previewDark, testEntry?.Time, replaySound);
+                ToastNotificationWindow.Show(testDisplayName, minutesBefore, ResolveTestTimeText(zmanName), isTest: true, previewDuration, previewDark, testEntry?.Time, replaySound);
             }
 
             replaySound?.Invoke();
@@ -1870,7 +2151,7 @@ namespace HebrewTaskbarWidget
 
         private void AdvancedRuleEditorSaveButton_Click(object sender, RoutedEventArgs e)
         {
-            string zmanName = (AdvancedRuleZmanComboBox.SelectedItem as ComboBoxItem)?.Content as string
+            string zmanName = (AdvancedRuleZmanComboBox.SelectedItem as ComboBoxItem)?.Tag as string
                 ?? Services.ZmanimCalendar.AllZmanNames[0];
 
             bool previousEnabled = true;
@@ -2174,8 +2455,22 @@ namespace HebrewTaskbarWidget
                     : HebrewDayChangeSunsetRadio.IsChecked == true
                         ? HebrewDayChangeMode.AtSunset
                         : HebrewDayChangeMode.Midnight,
-                CandleLightingMinutesBeforeSunset = _candleLightingMinutesTextBox is not null ? (int)ParseDoubleOrDefault(_candleLightingMinutesTextBox.Text, 40) : 40,
-                TzeitHakochavimMinutesAfterSunset = _tzeitMinutesTextBox is not null ? ParseNullableIntOrNull(_tzeitMinutesTextBox.Text) : null,
+                CandleLightingMinutesBeforeSunset = _candleLightingMinutesBeforeSunset,
+                TzeitHakochavimMinutesAfterSunset = _tzeitMinutesAfterSunsetOverride,
+                ZmanCustomizations = _zmanCustomizations.Values.Select(c => new ZmanCustomization
+                {
+                    BaseZmanName = c.BaseZmanName,
+                    CustomName = c.CustomName,
+                    MethodOverride = c.MethodOverride,
+                }).ToList(),
+                ZmanDuplicateRows = _zmanDuplicateRows.Select(d => new ZmanDuplicateRow
+                {
+                    Id = d.Id,
+                    BaseZmanName = d.BaseZmanName,
+                    CustomName = d.CustomName,
+                    Method = d.Method,
+                }).ToList(),
+                DefaultZmanCalculationMethod = (ZmanCalculationMethod)ZmanCalculationMethodComboBox.SelectedIndex,
                 VisibleZmanNames = visibleZmanNames,
 
                 // --- תאריך ושעה ---

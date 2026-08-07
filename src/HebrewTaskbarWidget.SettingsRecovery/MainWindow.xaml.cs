@@ -169,6 +169,14 @@ namespace HebrewTaskbarWidget
 
         // חלונית זמני היום (חלק 2) - נוצרת לפי דרישה בלחיצה, ומתבטלת כשנסגרת
         private ZmanimPopup? _zmanimPopup;
+
+        /// <summary>
+        /// האם הוידג'ט צמוד כרגע לקצה ימין/שמאל של המסך (בסיבולת קטנה) -
+        /// מתעדכן בכל UpdatePosition, ולא בזמן פתיחת לוח הזמנים עצמו - ראו
+        /// הערה מפורטת שם. null = לא צמוד לאף קצה (הרגיל). נצרך רק כאשר
+        /// AppSettings.ZmanimPopupAlignment == Auto.
+        /// </summary>
+        private WidgetAttachSide? _cachedEdgeSnapAlignment;
         private SettingsWindow? _settingsWindow;
 
         public MainWindow()
@@ -286,12 +294,27 @@ namespace HebrewTaskbarWidget
                 return;
             }
 
-            MessageBoxResult result = AppMessageBoxWindow.Show(
-                $"נמצאה גרסה חדשה של תאריכון: {info.Version}. האם לעדכן עכשיו?",
-                "עדכון תוכנה זמין",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Information,
-                this);
+            // לולאה: "מה חדש" מציג את חלונית השחרור ומחזיר לאותה שאלה שוב
+            // (במקום פשוט לסגור אותה) - כדי שהמשתמש עדיין יוכל לבחור לעדכן
+            // אחרי שקרא מה השתנה, לא רק לפני.
+            MessageBoxResult result;
+            while (true)
+            {
+                result = AppMessageBoxWindow.Show(
+                    $"נמצאה גרסה חדשה של תאריכון: {info.Version}. האם לעדכן עכשיו?",
+                    "עדכון תוכנה זמין",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information,
+                    this,
+                    extraButtonText: "מה חדש");
+
+                if (result != MessageBoxResult.Cancel)
+                {
+                    break;
+                }
+
+                AboutDialogHelper.ShowWhatsNew(this);
+            }
 
             if (result != MessageBoxResult.Yes)
             {
@@ -1212,6 +1235,29 @@ namespace HebrewTaskbarWidget
                 {
                     newTop = monitorTopDip;
                 }
+
+                // מטרת הבדיקה: לא בשביל למקם את הוידג'ט עצמו (זה כבר נעשה
+                // למעלה) - אלא כדי לזכור (למקרה שלוח הזמנים ייפתח בעתיד,
+                // ראו ZmanimPopup ו-AppSettings.ZmanimPopupAlignment.Auto)
+                // האם הוידג'ט צמוד כרגע לקצה ימין/שמאל של המסך, כדי שהלוח
+                // ידע ליישר את עצמו לאותו קצה במקום להיפתח ממורכז וב"לחתוך".
+                // בכוונה לא מבצעים את הזיהוי הזה "בזמן אמת" בפתיחת הלוח עצמו
+                // (זה היה גורם לו להיפתח ממורכז ואז "לקפוץ" ליישור ברגע
+                // האחרון) - אלא שומרים תוצאה מוכנה מראש, שמתעדכנת בכל פעם
+                // שמיקום הוידג'ט עצמו מתעדכן ממילא.
+                const double edgeSnapToleranceDip = 8.0;
+                if (newLeft + widgetWidthDip >= monitorRightDip - edgeSnapToleranceDip)
+                {
+                    _cachedEdgeSnapAlignment = WidgetAttachSide.Right;
+                }
+                else if (newLeft <= monitorLeftDip + edgeSnapToleranceDip)
+                {
+                    _cachedEdgeSnapAlignment = WidgetAttachSide.Left;
+                }
+                else
+                {
+                    _cachedEdgeSnapAlignment = null;
+                }
             }
 
             // ראו הערה מפורטת ליד הצהרת השדות _lastStableLeft/_pendingSuspiciousLeft
@@ -1333,22 +1379,12 @@ namespace HebrewTaskbarWidget
             _zmanimPopup.Closed += (_, _) => _zmanimPopup = null;
 
             _zmanimPopup.Show();
-            _zmanimPopup.PositionAboveWidget(Left, Top, ActualWidth);
+            _zmanimPopup.PositionAboveWidget(Left, Top, ActualWidth, _cachedEdgeSnapAlignment);
         }
 
         private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.6.5";
-
-            AppMessageBoxWindow.Show(
-                $"תאריכון - וידג'ט תאריך עברי לשורת המשימות\nגרסה {version}\n\n" +
-                "מציג את התאריך העברי, היום בשבוע ופרשת השבוע, צמוד לשעון המערכת.\n\n" +
-                "נתוני פרשת השבוע: Hebcal.com (רישיון CC BY 4.0)\n\n" +
-                $"מקור התוכנה: {UpdateService.RepositoryUrl}",
-                "אודות",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information,
-                this);
+            AboutDialogHelper.Show(this);
         }
 
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)

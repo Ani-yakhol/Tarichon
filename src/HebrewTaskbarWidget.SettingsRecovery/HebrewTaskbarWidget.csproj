@@ -25,9 +25,9 @@
     <RootNamespace>HebrewTaskbarWidget</RootNamespace>
 
     <!-- מספר גרסה -->
-    <Version>0.6.5</Version>
-    <AssemblyVersion>0.6.5.0</AssemblyVersion>
-    <FileVersion>0.6.5.0</FileVersion>
+    <Version>0.7.0</Version>
+    <AssemblyVersion>0.7.0.0</AssemblyVersion>
+    <FileVersion>0.7.0.0</FileVersion>
     <Product>תאריכון</Product>
     <AssemblyTitle>Tarichon - Hebrew Taskbar Widget</AssemblyTitle>
     <Company>Tarichon Project</Company>
@@ -93,16 +93,13 @@
     </Content>
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- נדרש עבור System.Windows.Automation (UI Automation) - שמשמש לאיתור
-         אמין של כפתור "^" (הצג סמלים מוסתרים) במגש המערכת, כולל ב-Windows 11
-         שם חלק ניכר מאזור ההתראות מבוסס XAML ואינו חושף HWND-ים נפרדים לכל
-         סמל/כפתור, ולכן חיפוש Win32 גולמי (FindWindowEx) לבדו אינו מספיק
-         אמין שם. ראו Services/TaskbarClockLocator.cs.
-    -->
-    <Reference Include="UIAutomationClient" />
-    <Reference Include="UIAutomationTypes" />
-  </ItemGroup>
+  <!-- הערה: System.Windows.Automation (UI Automation, בשימוש ב-
+       Services/TaskbarClockLocator.cs לאיתור אמין של כפתור "^" בשורת
+       המשימות) לא דורש כאן <Reference> מפורש - פרוייקט מסוג WPF SDK
+       (UseWPF=true) כבר כולל את UIAutomationClient/UIAutomationTypes
+       באופן מובנה. <Reference> מפורש שהיה כאן בעבר (הוסר) יצר הפניה
+       כפולה מול ההפניה המובנית, שגרמה לאזהרות MSB3243/MSB3245 בזמן
+       בנייה (לא לשגיאה בפועל - "Choosing ... arbitrarily" - אך מיותרת). -->
 
   <ItemGroup>
     <!-- קבצי הפרוייקט השני (כלי הגישה העצמאי להגדרות) יושבים באותה תיקייה

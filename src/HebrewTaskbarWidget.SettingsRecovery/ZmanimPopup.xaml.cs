@@ -23,7 +23,7 @@ namespace HebrewTaskbarWidget
 
         public static ZmanDisplayItem From(ZmanEntry entry, bool isNext) => new()
         {
-            Name = ZmanimCalendar.GetPopupDisplayName(entry.Name),
+            Name = ZmanimCalendar.GetPopupDisplayName(entry),
             DisplayTime = entry.Time.HasValue ? AppTimeService.FormatZmanTime(entry.Time.Value) : "—",
             IsNext = isNext,
         };
@@ -179,17 +179,25 @@ namespace HebrewTaskbarWidget
         }
 
         /// <summary>
-        /// ממקמת את חלונית הפופ-אפ מעל הוידג'ט הראשי, לפי יישור אופקי הנבחר
-        /// בהגדרות (SettingsService.Current.ZmanimPopupAlignment - "כללי",
-        /// ההגדרה הראשונה בלשונית): ממורכז (ברירת המחדל, כפי שהיה עד כה),
-        /// קצה ימין מיושר עם קצה ימין הוידג'ט, או קצה שמאל מיושר עם קצה
-        /// שמאל הוידג'ט.
+        /// מצב "צמוד לקצה" של הוידג'ט הראשי בזמן פתיחת הלוח, כפי שחושב מראש
+        /// (לא בזמן אמת) ב-MainWindow.UpdatePosition - נצרך רק כאשר ההגדרה
+        /// היא Auto (ראו ComputeLeft).
         /// </summary>
-        public void PositionAboveWidget(double widgetLeft, double widgetTop, double widgetWidth)
+        private WidgetAttachSide? _widgetEdgeSnapAlignment;
+
+        /// <summary>
+        /// ממקמת את חלונית הפופ-אפ מעל הוידג'ט הראשי, לפי יישור אופקי הנבחר
+        /// בהגדרות (SettingsService.Current.ZmanimPopupAlignment - "וידג'ט"):
+        /// אוטומטי (ברירת המחדל - ממורכז, אלא אם הוידג'ט צמוד לקצה מסך, ואז
+        /// מיושר לאותו קצה), ממורכז תמיד, קצה ימין מיושר עם קצה ימין הוידג'ט,
+        /// או קצה שמאל מיושר עם קצה שמאל הוידג'ט.
+        /// </summary>
+        public void PositionAboveWidget(double widgetLeft, double widgetTop, double widgetWidth, WidgetAttachSide? widgetEdgeSnapAlignment = null)
         {
             _widgetLeft = widgetLeft;
             _widgetTop = widgetTop;
             _widgetWidth = widgetWidth;
+            _widgetEdgeSnapAlignment = widgetEdgeSnapAlignment;
 
             // ממתינים למידות בפועל של החלון (SizeToContent) לפני חישוב המרכוז הסופי
             UpdateLayout();
@@ -208,7 +216,19 @@ namespace HebrewTaskbarWidget
         /// <summary>מחשבת את מיקום ה-Left הרצוי לפי יישור ההגדרה הנוכחית - ראו הערה ב-PositionAboveWidget.</summary>
         private double ComputeLeft(double popupWidth)
         {
-            return SettingsService.Current.ZmanimPopupAlignment switch
+            ZmanimPopupAlignment alignment = SettingsService.Current.ZmanimPopupAlignment;
+
+            if (alignment == ZmanimPopupAlignment.Auto)
+            {
+                alignment = _widgetEdgeSnapAlignment switch
+                {
+                    WidgetAttachSide.Right => ZmanimPopupAlignment.RightEdge,
+                    WidgetAttachSide.Left => ZmanimPopupAlignment.LeftEdge,
+                    _ => ZmanimPopupAlignment.Center,
+                };
+            }
+
+            return alignment switch
             {
                 ZmanimPopupAlignment.RightEdge => _widgetLeft + _widgetWidth - popupWidth,
                 ZmanimPopupAlignment.LeftEdge => _widgetLeft,
@@ -256,8 +276,14 @@ namespace HebrewTaskbarWidget
             HolidayHeaderText.Text = holidayName ?? string.Empty;
             HolidayHeaderText.Visibility = holidayName is null ? Visibility.Collapsed : Visibility.Visible;
 
-            IReadOnlyList<ZmanEntry> zmanim = ZmanimCalendar.Calculate(_selectedDate, _location, SettingsService.Current.CandleLightingMinutesBeforeSunset, SettingsService.Current.TzeitHakochavimMinutesAfterSunset)
-                .Where(z => SettingsService.Current.IsZmanVisible(z.Name))
+            IReadOnlyList<ZmanEntry> zmanim = ZmanimCalendar.Calculate(
+                    _selectedDate, _location,
+                    SettingsService.Current.CandleLightingMinutesBeforeSunset,
+                    SettingsService.Current.TzeitHakochavimMinutesAfterSunset,
+                    SettingsService.Current.DefaultZmanCalculationMethod,
+                    SettingsService.Current.ZmanCustomizations,
+                    SettingsService.Current.ZmanDuplicateRows)
+                .Where(z => SettingsService.Current.IsZmanVisible(z.Key))
                 .ToList();
 
             // הזמן "הקרוב" (מודגש בצבע הדגשה) - רק כאשר היום המוצג הוא היום

@@ -77,7 +77,13 @@ namespace HebrewTaskbarWidget.Services
             }
 
             GeoLocation location = SettingsService.BuildLocation();
-            IReadOnlyList<ZmanEntry> todaysZmanim = ZmanimCalendar.Calculate(today, location, SettingsService.Current.CandleLightingMinutesBeforeSunset, SettingsService.Current.TzeitHakochavimMinutesAfterSunset);
+            IReadOnlyList<ZmanEntry> todaysZmanim = ZmanimCalendar.Calculate(
+                today, location,
+                SettingsService.Current.CandleLightingMinutesBeforeSunset,
+                SettingsService.Current.TzeitHakochavimMinutesAfterSunset,
+                SettingsService.Current.DefaultZmanCalculationMethod,
+                SettingsService.Current.ZmanCustomizations,
+                SettingsService.Current.ZmanDuplicateRows);
             DateTime now = AppTimeService.Now();
 
             // --- הרשימה הראשית: שורה אחת לכל זמן, ללא חזרות ---
@@ -90,7 +96,7 @@ namespace HebrewTaskbarWidget.Services
                         continue;
                     }
 
-                    ZmanEntry? entry = todaysZmanim.FirstOrDefault(z => z.Name == rule.ZmanName);
+                    ZmanEntry? entry = todaysZmanim.FirstOrDefault(z => z.Key == rule.ZmanName);
                     if (entry is null || entry.Time is null)
                     {
                         continue;
@@ -111,11 +117,11 @@ namespace HebrewTaskbarWidget.Services
 
                         if (settings.NotificationShowPopup)
                         {
-                            ShowToast(entry.Name, entry.Time.Value, minutesBefore, onSnoozeReplaySound: () =>
-                                NotificationSoundService.PlayForZman(settings, rule.SoundOverridePath, rule.SoundOverrideFixedName, rule.ZmanName, (int)minutesBefore, entry.Time));
+                            ShowToast(ZmanimCalendar.GetPopupDisplayName(entry), entry.Time.Value, minutesBefore, onSnoozeReplaySound: () =>
+                                NotificationSoundService.PlayForZman(settings, rule.SoundOverridePath, rule.SoundOverrideFixedName, entry.VoiceKey, (int)minutesBefore, entry.Time));
                         }
 
-                        NotificationSoundService.PlayForZman(settings, rule.SoundOverridePath, rule.SoundOverrideFixedName, rule.ZmanName, (int)minutesBefore, entry.Time);
+                        NotificationSoundService.PlayForZman(settings, rule.SoundOverridePath, rule.SoundOverrideFixedName, entry.VoiceKey, (int)minutesBefore, entry.Time);
                     }
                 }
             }
@@ -128,7 +134,7 @@ namespace HebrewTaskbarWidget.Services
                     continue;
                 }
 
-                ZmanEntry? entry = todaysZmanim.FirstOrDefault(z => z.Name == rule.ZmanName);
+                ZmanEntry? entry = todaysZmanim.FirstOrDefault(z => z.Key == rule.ZmanName);
                 if (entry is null || entry.Time is null)
                 {
                     continue;
@@ -149,11 +155,11 @@ namespace HebrewTaskbarWidget.Services
 
                     if (rule.ShowPopup)
                     {
-                        ShowToast(entry.Name, entry.Time.Value, minutesBefore, rule.ToastDurationSeconds, rule.ToastDarkBackground,
-                            onSnoozeReplaySound: () => NotificationSoundService.PlayForAdvancedRule(rule, entry.Time));
+                        ShowToast(ZmanimCalendar.GetPopupDisplayName(entry), entry.Time.Value, minutesBefore, rule.ToastDurationSeconds, rule.ToastDarkBackground,
+                            onSnoozeReplaySound: () => NotificationSoundService.PlayForAdvancedRule(rule, entry.Time, entry.VoiceKey));
                     }
 
-                    NotificationSoundService.PlayForAdvancedRule(rule, entry.Time);
+                    NotificationSoundService.PlayForAdvancedRule(rule, entry.Time, entry.VoiceKey);
                 }
             }
         }

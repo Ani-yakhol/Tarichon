@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace HebrewTaskbarWidget.Models
 {
@@ -71,7 +72,14 @@ namespace HebrewTaskbarWidget.Models
     /// <summary>איך לוח הזמנים (ZmanimPopup) ממוקם אופקית ביחס לוידג'ט כשהוא נפתח.</summary>
     public enum ZmanimPopupAlignment
     {
-        /// <summary>ברירת המחדל: ממורכז מעל הוידג'ט.</summary>
+        /// <summary>
+        /// ברירת המחדל: בדרך כלל ממורכז מעל הוידג'ט - אך אם הוידג'ט צמוד
+        /// לקצה מסך (ימין/שמאל), מיושר לקו אחד עם אותו קצה במקום. ראו
+        /// MainWindow._cachedEdgeSnapAlignment.
+        /// </summary>
+        Auto,
+
+        /// <summary>ממורכז מעל הוידג'ט - תמיד, ללא תלות במיקום הוידג'ט.</summary>
         Center,
 
         /// <summary>קצה ימין של הלוח מיושר בקו אחד עם קצה ימין של הוידג'ט.</summary>
@@ -149,6 +157,43 @@ namespace HebrewTaskbarWidget.Models
     }
 
     /// <summary>
+    /// התאמה אישית לזמן בודד (נערכת מהחלונית הקטנה שנפתחת בלחיצה על שם
+    /// הזמן ב"אילו זמנים להציג", לשונית "מיקום וזמנים") - שם מותאם אישית
+    /// ו/או שיטת חישוב שונה מהשיטה הכללית (AppSettings.DefaultZmanCalculationMethod).
+    /// מפתח: BaseZmanName - השם הקנוני של הזמן (כמו ZmanimCalendar.NameAlotHaShachar),
+    /// **לא** משתנה גם אם CustomName מוגדר - כל שאר האפליקציה (כללי התראה,
+    /// רשימת "אילו זמנים להציג", HebrewDayRolloverService) ממשיכה להתייחס
+    /// לזמן לפי השם הקנוני שלו; רק התצוגה בפועל (בלוח הזמנים, בהתראות)
+    /// מציגה את CustomName אם הוגדר - ראו ZmanEntry.Key מול ZmanEntry.DisplayName.
+    /// </summary>
+    public sealed class ZmanCustomization
+    {
+        public string BaseZmanName { get; set; } = string.Empty;
+
+        /// <summary>null = השם הקנוני הרגיל (ללא התאמה אישית).</summary>
+        public string? CustomName { get; set; }
+
+        /// <summary>null = משתמש בשיטה הכללית (AppSettings.DefaultZmanCalculationMethod). לא רלוונטי ל"הדלקת נרות" (אין לו שיטת חישוב בכלל).</summary>
+        public ZmanCalculationMethod? MethodOverride { get; set; }
+    }
+
+    /// <summary>
+    /// שורת "זמן כפול" - אותו זמן בסיסי (BaseZmanName) מוצג פעם נוספת ברשימה,
+    /// עם שיטת חישוב שונה מהשורה ה"ראשית" של אותו זמן (ולכן חייב שם מותאם
+    /// אישית משלו, כדי להבדיל בין השתיים ברשימה/בהתראות) - ראו "הוסף שורת
+    /// זמן כפולה" בחלונית עריכת הזמן. Id הוא המפתח היציב לזיהוי השורה הזו
+    /// (ראו ZmanEntry.Key) - לא תלוי בשם המוצג, כדי ששינוי שם לא "ישבור"
+    /// כללי התראה/נראות קיימים עבורה.
+    /// </summary>
+    public sealed class ZmanDuplicateRow
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString("N");
+        public string BaseZmanName { get; set; } = string.Empty;
+        public string CustomName { get; set; } = string.Empty;
+        public ZmanCalculationMethod Method { get; set; }
+    }
+
+    /// <summary>
     /// כלל התראה "מתקדם" - מאפשר כמה התראות במקביל על אותו זמן (למשל 40,
     /// 30 ו-5 דקות לפני אותו זמן), כל אחד עם הגדרות תצוגה/צליל עצמאיות
     /// לגמרי משלו (ולא תלוי בהגדרה הכללית או ברשימה הראשית).
@@ -181,6 +226,35 @@ namespace HebrewTaskbarWidget.Models
     }
 
     /// <summary>
+    /// שיטת חישוב הזמנים (עלות השחר/צאת הכוכבים, ולכן גם הזמנים המבוססים
+    /// עליהם - סוף זמן ק"ש/תפילה מג"א): שתי שיטות נפוצות ומקובלות, אינן
+    /// פוסקות הלכה למעשה.
+    /// </summary>
+    public enum ZmanCalculationMethod
+    {
+        /// <summary>
+        /// ברירת המחדל ההיסטורית של התוכנה: עלות השחר/צאת הכוכבים לפי זווית
+        /// שקיעת החמה מתחת לאופק (16.1°/8.5° בהתאמה, גישה גיאומטרית-אסטרונומית
+        /// טהורה).
+        /// </summary>
+        Gra,
+
+        /// <summary>
+        /// מבוסס על ספריית KosherJava Zmanim (חישוב זמני היום בהלכה, מאת
+        /// אליהו הרשפלד) - דרך ה-port ל-.NET של Yitzchok/Zmanim (LGPL 2.1,
+        /// https://github.com/Yitzchok/Zmanim). עלות השחר/צאת הכוכבים
+        /// מחושבים לפי "72 דקות זמניות" (גר"א/בעל התניא) - לא 72 דקות שעון
+        /// קבועות, אלא 1.2 שעות זמניות (יחסיות לאורך היום בפועל) לפני
+        /// הנץ/אחרי השקיעה (ברמת פני הים). הנוסחה המדוייקת מ-KosherJava:
+        /// Alos72 = SeaLevelSunrise − (ShaahZmanisGra × 1.2), כאשר
+        /// ShaahZmanisGra = (SeaLevelSunset − SeaLevelSunrise) ÷ 12 - ראו
+        /// ComplexZmanimCalendar.GetAlos72 בספריית המקור. Tzais72 המקביל
+        /// (סימטרי): SeaLevelSunset + (ShaahZmanisGra × 1.2).
+        /// </summary>
+        Mga72Zmaniyos,
+    }
+
+    /// <summary>
     /// כלל ההגדרות הניתנות לשמירה של האפליקציה - נשמר כ-JSON תחת
     /// %AppData%\HebrewTaskbarWidget\settings.json ונטען מחדש עם עליית התוכנה.
     /// </summary>
@@ -191,7 +265,7 @@ namespace HebrewTaskbarWidget.Models
         public bool ShowWidget { get; set; } = true;
         public WidgetPositionMode PositionMode { get; set; } = WidgetPositionMode.ChevronAttached;
         /// <summary>איך לוח הזמנים ממוקם אופקית ביחס לוידג'ט כשהוא נפתח (מיקום וזמנים, לשונית "כללי").</summary>
-        public ZmanimPopupAlignment ZmanimPopupAlignment { get; set; } = ZmanimPopupAlignment.Center;
+        public ZmanimPopupAlignment ZmanimPopupAlignment { get; set; } = ZmanimPopupAlignment.Auto;
 
         // --- מצב "מרחק מותאם אישית מקצה שורת המשימות" (WidgetPositionMode.CustomEdgeOffset) ---
         public WidgetAttachSide CustomOffsetSide { get; set; } = WidgetAttachSide.Left;
@@ -336,6 +410,18 @@ namespace HebrewTaskbarWidget.Models
         public int? TzeitHakochavimMinutesAfterSunset { get; set; }
 
         /// <summary>
+        /// שיטת החישוב הכללית לעלות השחר/צאת הכוכבים (ולזמנים התלויים בהם -
+        /// סוף זמן ק"ש/תפילה מג"א) - ראו ZmanCalculationMethod למעלה.
+        /// </summary>
+        public ZmanCalculationMethod DefaultZmanCalculationMethod { get; set; } = ZmanCalculationMethod.Gra;
+
+        /// <summary>התאמות אישיות (שם/שיטת חישוב) לזמנים בודדים - ראו ZmanCustomization.</summary>
+        public List<ZmanCustomization> ZmanCustomizations { get; set; } = new();
+
+        /// <summary>שורות "זמן כפול" - ראו ZmanDuplicateRow.</summary>
+        public List<ZmanDuplicateRow> ZmanDuplicateRows { get; set; } = new();
+
+        /// <summary>
         /// אילו זמנים (מתוך ZmanimCalendar.AllZmanNames) יוצגו בלוח הזמנים
         /// (הפופ-אפ) וברשימות הבחירה בלשונית התראות - null = כולם מוצגים
         /// (ברירת המחדל בפועל; לא ממלאים רשימה מפורשת של "הכל" כדי שזמנים
@@ -344,7 +430,8 @@ namespace HebrewTaskbarWidget.Models
         public List<string>? VisibleZmanNames { get; set; }
 
         /// <summary>האם זמן נתון (לפי שמו הקנוני) מוגדר להצגה - כברירת מחדל (VisibleZmanNames == null) כולם מוצגים.</summary>
-        public bool IsZmanVisible(string zmanName) => VisibleZmanNames is null || VisibleZmanNames.Contains(zmanName);
+        /// <summary>האם זמן נתון (לפי ה-Key הקנוני שלו - ראו ZmanEntry.Key) מוגדר להצגה - כברירת מחדל (VisibleZmanNames == null) כולם מוצגים. שורות "זמן כפול" (ZmanDuplicateRows) נשלטות בדיוק כמו כל שורה אחרת, לפי ה-Id הייחודי שלהן.</summary>
+        public bool IsZmanVisible(string zmanKey) => VisibleZmanNames is null || VisibleZmanNames.Contains(zmanKey);
 
         // --- תאריך ושעה (ראו Services/AppTimeService) ---
         /// <summary>אם מופעל, "עכשיו" בכל האפליקציה נלקח מהתאריך/שעה הידניים למטה (עם המשך זרימת זמן טבעית מרגע ההגדרה) ולא מהתאריך/שעה של המחשב.</summary>

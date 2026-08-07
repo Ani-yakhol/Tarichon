@@ -81,7 +81,7 @@ namespace HebrewTaskbarWidget
 
             if (shouldShow && _overlayWindow is null)
             {
-                _overlayWindow = new DesktopOverlayWindow();
+                _overlayWindow = new DesktopOverlayWindow(() => _mainWindow?.OpenSettings(SettingsWindow.DesktopTabIndex));
                 _overlayWindow.Show();
             }
             else if (!shouldShow && _overlayWindow is not null)

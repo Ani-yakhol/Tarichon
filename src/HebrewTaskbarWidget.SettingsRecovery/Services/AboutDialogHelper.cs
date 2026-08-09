@@ -13,7 +13,7 @@ namespace HebrewTaskbarWidget.Services
     {
         public static void Show(Window owner)
         {
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.7.0";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.7.7";
 
             AppMessageBoxWindow.Show(
                 $"תאריכון - וידג'ט תאריך עברי לשורת המשימות\nגרסה {version}\n\n" +

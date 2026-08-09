@@ -29,6 +29,17 @@ namespace HebrewTaskbarWidget
         {
             base.OnStartup(e);
 
+            // רשת ביטחון גורפת: חריגה לא-מטופלת בתוך אירוע/קריאה רגילה של
+            // WPF (על ה-Dispatcher, שרוב הקוד באפליקציה רץ עליו) הייתה
+            // גורמת קודם לסגירה מלאה ובלתי-מוסברת של התוכנה ("וינדוס סוגר
+            // את התוכנה") - בלי שום הודעה/הסבר למשתמש. מסמנים Handled=true
+            // כדי שהתוכנה תמשיך לרוץ במקום לקרוס לגמרי, ולפחות מיידעים
+            // בעדינות (בלי לחייב את המשתמש להתמודד עם פרטי שגיאה טכניים).
+            DispatcherUnhandledException += (_, args) =>
+            {
+                args.Handled = true;
+            };
+
             _singleInstanceMutex = new Mutex(initiallyOwned: true, name: MutexName, createdNew: out bool isNewInstance);
 
             if (!isNewInstance)

@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -171,10 +172,11 @@ namespace HebrewTaskbarWidget
         private ZmanimPopup? _zmanimPopup;
 
         /// <summary>
-        /// האם הוידג'ט צמוד כרגע לקצה ימין/שמאל של המסך (בסיבולת קטנה) -
-        /// מתעדכן בכל UpdatePosition, ולא בזמן פתיחת לוח הזמנים עצמו - ראו
-        /// הערה מפורטת שם. null = לא צמוד לאף קצה (הרגיל). נצרך רק כאשר
-        /// AppSettings.ZmanimPopupAlignment == Auto.
+        /// האם לוח הזמנים, אם היה נפתח ממורכז מעל הוידג'ט *כרגע*, היה נחתך
+        /// בקצה מסך ימין/שמאל (לפי רוחבו הטיפוסי המוערך - לא רק אם הוידג'ט
+        /// עצמו ממש צמוד לקצה) - מתעדכן בכל UpdatePosition, ולא בזמן פתיחת
+        /// לוח הזמנים עצמו - ראו הערה מפורטת שם. null = לא צפוי חיתוך בשום
+        /// קצה (הרגיל). נצרך רק כאשר AppSettings.ZmanimPopupAlignment == Auto.
         /// </summary>
         private WidgetAttachSide? _cachedEdgeSnapAlignment;
         private SettingsWindow? _settingsWindow;
@@ -1239,18 +1241,25 @@ namespace HebrewTaskbarWidget
                 // מטרת הבדיקה: לא בשביל למקם את הוידג'ט עצמו (זה כבר נעשה
                 // למעלה) - אלא כדי לזכור (למקרה שלוח הזמנים ייפתח בעתיד,
                 // ראו ZmanimPopup ו-AppSettings.ZmanimPopupAlignment.Auto)
-                // האם הוידג'ט צמוד כרגע לקצה ימין/שמאל של המסך, כדי שהלוח
-                // ידע ליישר את עצמו לאותו קצה במקום להיפתח ממורכז וב"לחתוך".
-                // בכוונה לא מבצעים את הזיהוי הזה "בזמן אמת" בפתיחת הלוח עצמו
-                // (זה היה גורם לו להיפתח ממורכז ואז "לקפוץ" ליישור ברגע
-                // האחרון) - אלא שומרים תוצאה מוכנה מראש, שמתעדכנת בכל פעם
-                // שמיקום הוידג'ט עצמו מתעדכן ממילא.
-                const double edgeSnapToleranceDip = 8.0;
-                if (newLeft + widgetWidthDip >= monitorRightDip - edgeSnapToleranceDip)
+                // האם לוח הזמנים, אם היה נפתח *ממורכז* מעל הוידג'ט כרגע,
+                // היה נחתך בקצה מסך - לא רק אם הוידג'ט עצמו ממש צמוד לקצה.
+                // לכן הבדיקה כאן לא מסתפקת בבדיקת מרחק הוידג'ט מהקצה, אלא
+                // מחשבת בפועל את מלבן הלוח המוערך (לפי רוחבו הטיפוסי) סביב
+                // מרכז הוידג'ט, ובודקת אם הוא היה חורג מגבולות המסך. בכוונה
+                // לא מבצעים את הזיהוי הזה "בזמן אמת" בפתיחת הלוח עצמו (זה
+                // היה גורם לו להיפתח ממורכז ואז "לקפוץ" ליישור ברגע האחרון) -
+                // אלא שומרים תוצאה מוכנה מראש, שמתעדכנת בכל פעם שמיקום
+                // הוידג'ט עצמו מתעדכן ממילא.
+                const double estimatedPopupWidthDip = 300.0;
+                double widgetCenterXDip = newLeft + (widgetWidthDip / 2.0);
+                double popupLeftIfCenteredDip = widgetCenterXDip - (estimatedPopupWidthDip / 2.0);
+                double popupRightIfCenteredDip = widgetCenterXDip + (estimatedPopupWidthDip / 2.0);
+
+                if (popupRightIfCenteredDip > monitorRightDip)
                 {
                     _cachedEdgeSnapAlignment = WidgetAttachSide.Right;
                 }
-                else if (newLeft <= monitorLeftDip + edgeSnapToleranceDip)
+                else if (popupLeftIfCenteredDip < monitorLeftDip)
                 {
                     _cachedEdgeSnapAlignment = WidgetAttachSide.Left;
                 }
@@ -1322,6 +1331,36 @@ namespace HebrewTaskbarWidget
         private void ZmanimMenuItem_Click(object sender, RoutedEventArgs e)
         {
             ToggleZmanimPopup();
+        }
+
+        private Services.GlobalClickWatcher? _widgetMenuClickWatcher;
+
+        /// <summary>
+        /// נרשם ל-GlobalClickWatcher ברגע שתפריט ההקשר של הוידג'ט נפתח -
+        /// כדי שהתפריט ייסגר בלחיצה בכל מקום במחשב (לא רק לחיצה בתוך
+        /// התהליך של תאריכון עצמו) - ראו הערה מפורטת ב-GlobalClickWatcher.
+        /// </summary>
+        private void WidgetContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            if (sender is not ContextMenu menu)
+            {
+                return;
+            }
+
+            menu.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                IntPtr menuHandle = PresentationSource.FromVisual(menu) is HwndSource hwndSource ? hwndSource.Handle : IntPtr.Zero;
+
+                _widgetMenuClickWatcher = new Services.GlobalClickWatcher(
+                    onClickOutside: () => menu.Dispatcher.BeginInvoke(new Action(() => menu.IsOpen = false)),
+                    getProtectedRootHandles: () => new[] { menuHandle });
+            }), DispatcherPriority.Loaded);
+        }
+
+        private void WidgetContextMenu_Closed(object sender, RoutedEventArgs e)
+        {
+            _widgetMenuClickWatcher?.Dispose();
+            _widgetMenuClickWatcher = null;
         }
 
         private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)

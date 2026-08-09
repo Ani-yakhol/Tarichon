@@ -23,7 +23,7 @@
             AllowsTransparency+PerMonitorV2) - הוא נפתח יזומה מקוד ה-C#,
             כתגובה להודעת WM_RBUTTONDOWN גולמית (ראו MainWindow.xaml.cs).
         -->
-        <ContextMenu x:Key="WidgetContextMenu" FlowDirection="RightToLeft">
+        <ContextMenu x:Key="WidgetContextMenu" FlowDirection="RightToLeft" Opened="WidgetContextMenu_Opened" Closed="WidgetContextMenu_Closed">
             <MenuItem x:Name="ZmanimMenuItem"
                       Header="זמני היום..."
                       Click="ZmanimMenuItem_Click" />
@@ -55,7 +55,6 @@
     <Border x:Name="WidgetBackground"
             Background="#01000000"
             CornerRadius="4"
-            ToolTip="תאריכון"
             ContextMenu="{StaticResource WidgetContextMenu}">
 
         <!-- RootLayoutPanel: שני "טורים" אפשריים - שורות התאריך העברי, ולידן

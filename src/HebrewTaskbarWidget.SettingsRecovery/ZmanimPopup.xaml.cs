@@ -57,6 +57,8 @@ namespace HebrewTaskbarWidget
             "יום ראשון", "יום שני", "יום שלישי", "יום רביעי", "יום חמישי", "יום שישי", "יום שבת",
         };
 
+        private Services.GlobalClickWatcher? _clickWatcher;
+
         public ZmanimPopup()
         {
             InitializeComponent();
@@ -65,7 +67,36 @@ namespace HebrewTaskbarWidget
             RefreshDisplay();
 
             SettingsService.SettingsChanged += SettingsService_SettingsChanged;
-            Closed += (_, _) => SettingsService.SettingsChanged -= SettingsService_SettingsChanged;
+            Closed += (_, _) =>
+            {
+                SettingsService.SettingsChanged -= SettingsService_SettingsChanged;
+                _clickWatcher?.Dispose();
+                _clickWatcher = null;
+            };
+
+            // Deactivated (למעלה) הוא המנגנון הרגיל של WPF לסגירת פופ-אפ
+            // בלחיצה במקום אחר - אך לא תמיד עובד באופן עקבי עבור חלון עם
+            // AllowsTransparency+Topmost כמו זה. GlobalClickWatcher הוא רשת
+            // ביטחון נוספת ברמת Win32 גולמית, שלא תלויה במנגנון המיקוד/
+            // הפעלה הפנימי של WPF בכלל - ראו הערה מפורטת שם. נרשם רק אחרי
+            // שהחלון בפועל נפתח (SourceInitialized), כדי שיהיה HWND תקף
+            // להשוואה מול נקודת הלחיצה.
+            SourceInitialized += (_, _) =>
+            {
+                IntPtr myHandle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                _clickWatcher = new Services.GlobalClickWatcher(
+                    onClickOutside: () => Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        // IsLoaded==false אחרי סגירה - מגן מפני קריאה כפולה
+                        // ל-Close() (גם Deactivated וגם ה-Watcher עשויים
+                        // לנסות לסגור את אותו חלון כמעט בו-זמנית).
+                        if (IsLoaded)
+                        {
+                            Close();
+                        }
+                    })),
+                    getProtectedRootHandles: () => new[] { myHandle });
+            };
         }
 
         /// <summary>

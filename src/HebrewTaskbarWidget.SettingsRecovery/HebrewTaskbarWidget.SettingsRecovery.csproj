@@ -60,9 +60,9 @@
     <RootNamespace>HebrewTaskbarWidget.SettingsRecovery</RootNamespace>
     <AssemblyName>HebrewTaskbarWidgetSettings</AssemblyName>
 
-    <Version>0.7.0</Version>
-    <AssemblyVersion>0.7.0.0</AssemblyVersion>
-    <FileVersion>0.7.0.0</FileVersion>
+    <Version>0.7.7</Version>
+    <AssemblyVersion>0.7.7.0</AssemblyVersion>
+    <FileVersion>0.7.7.0</FileVersion>
     <Product>הגדרות תאריכון</Product>
     <AssemblyTitle>Tarichon - Settings</AssemblyTitle>
     <Company>Tarichon Project</Company>

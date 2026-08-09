@@ -17,27 +17,29 @@ namespace HebrewTaskbarWidget
     /// ההגדרות (חלק 3): "אפשרות להצגת פרטי היום כולל התאריך והשעה מעל מסך
     /// העבודה, במרכז או במיקום אחר, עם הגדרת צבע וגופן, ואפשרות 'עליון תמיד'".
     ///
-    /// החלון שקוף לחלוטין (Click-through) כברירת מחדל כדי שלא יפריע לעבודה
-    /// הרגילה על שולחן העבודה - קליקים "עוברים דרכו" אל האייקונים שמתחתיו.
-    /// עם זאת, כאשר Ctrl מוחזק לחוץ, הלחיצות מופנות בפועל לחלון (במקום
-    /// לעבור דרכו) - כדי לאפשר גרירה (Ctrl + גרירת עכבר) למיקום חדש על
-    /// המסך, בדיוק כמו הגרירה החופשית הקיימת לוידג'ט בשורת המשימות.
+    /// כמו הוידג'ט בשורת המשימות (MainWindow): "נראית" שקופה (Background
+    /// כמעט-שקוף לגמרי, #01000000 - לא Transparent אמיתי/אלפא-0, כדי
+    /// שהחלון כולו יישאר קליט-ללחיצות בכל שטחו, לא רק במקום שיש בו טקסט
+    /// גלוי בפועל) אך **תמיד קולטת לחיצות כרגיל** - בלי שום מנגנון "שקיפות-
+    /// ללחיצות" (WS_EX_TRANSPARENT) ברמת Win32. שלושה ניסיונות קודמים
+    /// (Ctrl-בלבד, Hook גלובלי עם "בליעה", כיבוי-שקיפות-רגעי מתוך Hook)
+    /// ניסו לשמר שקיפות-ללחיצות אמיתית עבור לחיצה שמאלית - אך כל אחד מהם
+    /// יצר סוג אחר של תקלה בפתיחת תפריט ההקשר בלחיצה ימנית. הפתרון שהתברר
+    /// הכי אמין: לוותר על השקיפות-ללחיצות לגמרי ולהתנהג בדיוק כמו
+    /// MainWindow - שם זה כבר עובד מצוין, כולל תפריט הקשר תקין לגמרי,
+    /// גם כשהוא ממוקם מעל שולחן העבודה. המשמעות: לחיצה שמאלית "רגילה"
+    /// (בלי Ctrl) על שטח התצוגה נבלמת (לא עוברת דרך לאייקונים מתחת) אך לא
+    /// עושה דבר בעצמה - רק Ctrl+גרירה שמאלית מזיזה את התצוגה, בדיוק כמו
+    /// קודם.
     /// </summary>
     public partial class DesktopOverlayWindow : Window
     {
         private static readonly TimeSpan ContentInterval = TimeSpan.FromSeconds(1);
-
-        // תדירות בדיקת מצב מקש Ctrl - כדי להחליף בין מצב "שקוף ללחיצות"
-        // (ברירת המחדל) למצב "קולט לחיצות" (בזמן החזקת Ctrl, לצורך גרירה).
-        private static readonly TimeSpan CtrlPollInterval = TimeSpan.FromMilliseconds(80);
-
         private const int DragThresholdPhysicalPixels = 4;
 
         private readonly DispatcherTimer _contentTimer;
-        private readonly DispatcherTimer _ctrlPollTimer;
 
         private IntPtr _hwnd;
-        private bool _isClickThroughCurrently; // false עד לקריאה הראשונה בפועל ל-SetClickThrough (ראו SourceInitialized) - כדי להבטיח שהסגנון אכן מוחל בפעם הראשונה
 
         private bool _isCtrlDragging;
         private bool _dragMoved;
@@ -45,7 +47,7 @@ namespace HebrewTaskbarWidget
         private int _dragStartWindowLeftPhysical;
         private int _dragStartWindowTopPhysical;
 
-        /// <summary>נקרא כשנבחר "הגדרות..." בתפריט ההקשר של התצוגה (ראו BuildContextMenu) - פותח את פאנל ההגדרות ישירות ללשונית "שולחן עבודה".</summary>
+        /// <summary>נקרא כשנבחר "הגדרות..." בתפריט ההקשר של התצוגה - פותח את פאנל ההגדרות ישירות ללשונית "שולחן עבודה".</summary>
         private readonly Action _openSettingsToDesktopTab;
 
         public DesktopOverlayWindow(Action openSettingsToDesktopTab)
@@ -57,16 +59,12 @@ namespace HebrewTaskbarWidget
             _contentTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = ContentInterval };
             _contentTimer.Tick += (_, _) => RefreshContent();
 
-            _ctrlPollTimer = new DispatcherTimer(DispatcherPriority.Send) { Interval = CtrlPollInterval };
-            _ctrlPollTimer.Tick += (_, _) => UpdateClickThroughState();
-
             SourceInitialized += DesktopOverlayWindow_SourceInitialized;
             Loaded += (_, _) =>
             {
                 RefreshContent();
                 ApplyPosition();
                 _contentTimer.Start();
-                _ctrlPollTimer.Start();
             };
 
             SettingsService.SettingsChanged += (_, _) => Dispatcher.Invoke(() =>
@@ -81,7 +79,15 @@ namespace HebrewTaskbarWidget
         {
             _hwnd = new WindowInteropHelper(this).Handle;
 
-            SetClickThrough(true);
+            // WS_EX_TOOLWINDOW+WS_EX_NOACTIVATE: לא מופיע ב-Alt+Tab ולא
+            // "גונב" מיקוד מחלונות אחרים בשולחן העבודה - אך עדיין קולטת
+            // לחיצות עכבר כרגיל (בניגוד לגרסה הקודמת, אין כאן WS_EX_TRANSPARENT
+            // בכלל יותר - ראו הערה מפורטת במחלקה למעלה).
+            int exStyle = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE);
+            exStyle |= NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE | NativeMethods.WS_EX_LAYERED;
+            exStyle &= ~NativeMethods.WS_EX_APPWINDOW;
+            NativeMethods.SetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE, exStyle);
+
             ApplyTopmost();
 
             HwndSource? source = HwndSource.FromHwnd(_hwnd);
@@ -107,7 +113,7 @@ namespace HebrewTaskbarWidget
                     break;
 
                 case NativeMethods.WM_RBUTTONUP:
-                    OnRawRightButtonUp(hwnd, lParam);
+                    ShowContextMenu();
                     handled = true;
                     break;
             }
@@ -115,32 +121,8 @@ namespace HebrewTaskbarWidget
             return IntPtr.Zero;
         }
 
-        /// <summary>
-        /// לחיצה ימנית פותחת תפריט הקשר (הגדרות/כיבוי/אודות) - **רק** כשCtrl
-        /// מוחזק, בדיוק כמו הגרירה (Ctrl + גרירה שמאלית) הקיימת - שתי
-        /// הפעולות "האמיתיות" על התצוגה החופשית דורשות Ctrl בכוונה, כי
-        /// היא שקופה ללחיצות כברירת מחדל (כדי לא להפריע לעבודה רגילה על
-        /// שולחן העבודה מתחתיה) - בלי Ctrl, הלחיצה הימנית פשוט "עוברת דרך"
-        /// התצוגה אל מה שמתחתיה (כמו תמיד), ואף פעם לא מגיעה לכאן בכלל.
-        /// </summary>
-        private void OnRawRightButtonUp(IntPtr hwnd, IntPtr lParam)
-        {
-            if ((NativeMethods.GetKeyState(NativeMethods.VK_CONTROL) & 0x8000) == 0)
-            {
-                return;
-            }
-
-            long raw = lParam.ToInt64();
-            int x = unchecked((short)(raw & 0xFFFF));
-            int y = unchecked((short)((raw >> 16) & 0xFFFF));
-            var point = new NativeMethods.POINT { X = x, Y = y };
-            NativeMethods.ClientToScreen(hwnd, ref point);
-
-            ShowContextMenu(point.X, point.Y);
-        }
-
         /// <summary>בונה ומציגה את תפריט ההקשר של התצוגה החופשית - זהה ברוחו לתפריט ההקשר של הוידג'ט בשורת המשימות (הגדרות/אודות), עם "כיבוי" ייעודי לתצוגה הזו בלבד.</summary>
-        private void ShowContextMenu(int screenXPhysical, int screenYPhysical)
+        private void ShowContextMenu()
         {
             var menu = new ContextMenu { FlowDirection = FlowDirection.RightToLeft };
 
@@ -163,61 +145,32 @@ namespace HebrewTaskbarWidget
             aboutItem.Click += (_, _) => AboutDialogHelper.Show(this);
             menu.Items.Add(aboutItem);
 
-            // ה-Popup של ContextMenu ממוקם ביחס לפינה הימנית-עליונה של החלון
-            // (Placement=Absolute) - לא ביחס לעכבר ישירות; ממירים את נקודת
-            // המסך הפיזית לקואורדינטות DIP יחסיות לחלון הזה, כדי שהתפריט
-            // ייפתח בדיוק במקום שבו לחצו, לא בפינת המסך.
-            double dpiScale = TaskbarClockLocator.GetTaskbarDpiScale();
-            if (dpiScale <= 0)
-            {
-                dpiScale = 1.0;
-            }
+            // Placement=MousePoint: פותח את התפריט בדיוק במיקום הסמן הנוכחי,
+            // ללא צורך בשום חישוב קואורדינטות ידני.
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
 
-            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Absolute;
-            menu.PlacementTarget = this;
-            menu.HorizontalOffset = (screenXPhysical / dpiScale) - Left;
-            menu.VerticalOffset = (screenYPhysical / dpiScale) - Top;
+            // ראו הערה מפורטת ב-Services.GlobalClickWatcher: תפריט הקשר על
+            // חלון NOACTIVATE כמו זה לא תמיד נסגר באופן עקבי בלחיצה במקום
+            // אחר על המסך דרך מנגנון ה-Popup-dismiss הרגיל של WPF - רשת
+            // ביטחון נוספת ברמת Win32 גולמית.
+            Services.GlobalClickWatcher? menuClickWatcher = null;
+            menu.Opened += (_, _) =>
+            {
+                menu.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    IntPtr menuHandle = PresentationSource.FromVisual(menu) is HwndSource hwndSource ? hwndSource.Handle : IntPtr.Zero;
+                    menuClickWatcher = new Services.GlobalClickWatcher(
+                        onClickOutside: () => menu.Dispatcher.BeginInvoke(new Action(() => menu.IsOpen = false)),
+                        getProtectedRootHandles: () => new[] { menuHandle });
+                }), DispatcherPriority.Loaded);
+            };
+            menu.Closed += (_, _) =>
+            {
+                menuClickWatcher?.Dispose();
+                menuClickWatcher = null;
+            };
+
             menu.IsOpen = true;
-        }
-
-        /// <summary>
-        /// בודקת אם Ctrl מוחזק כרגע, ומעדכנת את מצב ה-Click-through בהתאם -
-        /// כשלא גוררים בפועל (כדי לא "לאבד" את מצב הגרירה אם המשתמש משחרר
-        /// את Ctrl לרגע בטעות תוך כדי גרירה).
-        /// </summary>
-        private void UpdateClickThroughState()
-        {
-            if (_isCtrlDragging)
-            {
-                return;
-            }
-
-            bool ctrlDown = (NativeMethods.GetKeyState(NativeMethods.VK_CONTROL) & 0x8000) != 0;
-            SetClickThrough(!ctrlDown);
-        }
-
-        private void SetClickThrough(bool clickThrough)
-        {
-            if (_hwnd == IntPtr.Zero || _isClickThroughCurrently == clickThrough)
-            {
-                return;
-            }
-
-            int exStyle = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE);
-            exStyle |= NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE | NativeMethods.WS_EX_LAYERED;
-            exStyle &= ~NativeMethods.WS_EX_APPWINDOW;
-
-            if (clickThrough)
-            {
-                exStyle |= NativeMethods.WS_EX_TRANSPARENT;
-            }
-            else
-            {
-                exStyle &= ~NativeMethods.WS_EX_TRANSPARENT;
-            }
-
-            NativeMethods.SetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE, exStyle);
-            _isClickThroughCurrently = clickThrough;
         }
 
         private void OnRawLeftButtonDown(IntPtr hwnd, IntPtr lParam)
@@ -310,9 +263,6 @@ namespace HebrewTaskbarWidget
             }
 
             _dragMoved = false;
-
-            // מחזירים למצב שקוף ללחיצות אלא אם Ctrl עדיין מוחזק בפועל.
-            UpdateClickThroughState();
         }
 
         private void ApplyTopmost()

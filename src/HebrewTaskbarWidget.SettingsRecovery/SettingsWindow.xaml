@@ -366,12 +366,22 @@
     </Window.Resources>
 
     <DockPanel Margin="14">
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,12,0,0">
-            <Button x:Name="SaveButton" Content="שמור" Style="{StaticResource PrimaryActionButtonStyle}" Click="SaveButton_Click" />
-            <Button x:Name="CancelButton" Content="ביטול" Style="{StaticResource ActionButtonStyle}" Click="CancelButton_Click" />
-            <Button x:Name="RestoreDefaultsButton" Content="שחזור ברירות מחדל" Style="{StaticResource ActionButtonStyle}" Click="RestoreDefaultsButton_Click" />
-            <Button x:Name="ExitApplicationButton" Content="יציאה" Style="{StaticResource ActionButtonStyle}" Margin="8,0,0,0" Click="ExitApplicationButton_Click" />
-        </StackPanel>
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0" LastChildFill="False">
+            <!-- הערה על כיוון Dock: אומת בפועל (לא ניחוש) ש-DockPanel.Dock
+                 כן מתהפך תחת FlowDirection="RightToLeft" של החלון (בניגוד
+                 ל-HorizontalAlignment, שנשאר פיזי) - Dock="Left" מציג בפועל
+                 בצד הפיזי הימני, ו-Dock="Right" בצד הפיזי השמאלי. שני
+                 הצדדים כאן הם קצוות מנוגדים (לא אותו צד, ללא תלות בסדר
+                 ההצהרה) - כך שהרווח ביניהם מובטח תמיד (כל אשר נשאר בין שני
+                 הקצוות), לא תלוי בשוליים ידניים. -->
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button x:Name="SaveButton" Content="שמור" Style="{StaticResource PrimaryActionButtonStyle}" Click="SaveButton_Click" />
+                <Button x:Name="ApplyButton" Content="החל" Style="{StaticResource ActionButtonStyle}" Click="ApplyButton_Click" />
+                <Button x:Name="CancelButton" Content="ביטול" Style="{StaticResource ActionButtonStyle}" Click="CancelButton_Click" />
+            </StackPanel>
+
+            <Button x:Name="ExitApplicationButton" DockPanel.Dock="Right" Content="יציאה" Style="{StaticResource ActionButtonStyle}" Click="ExitApplicationButton_Click" />
+        </DockPanel>
 
         <TabControl x:Name="MainTabControl" Background="{DynamicResource WindowBackgroundBrush}" BorderThickness="0">
 
@@ -380,7 +390,7 @@
 
             <!-- טאב 2: הוידג'ט בשורת המשימות -->
             <TabItem Header="הוידג'ט">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10" PreviewMouseWheel="TabScrollViewer_PreviewMouseWheel">
+                <ScrollViewer x:Name="WidgetTabScrollViewer" VerticalScrollBarVisibility="Auto" Padding="4,10">
                     <StackPanel>
                         <CheckBox x:Name="ShowWidgetCheckBox" Content="הצג את הוידג'ט בשורת המשימות" Margin="0,0,0,14" />
 
@@ -507,7 +517,7 @@
 
             <!-- טאב 3: מיקום וזמני היום -->
             <TabItem Header="מיקום וזמנים">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10" PreviewMouseWheel="TabScrollViewer_PreviewMouseWheel">
+                <ScrollViewer x:Name="ZmanimTabScrollViewer" VerticalScrollBarVisibility="Auto" Padding="4,10">
                     <StackPanel>
                         <TextBlock Style="{StaticResource SectionHeader}" Text="תאריך ושעה" Margin="0,0,0,4" />
                         <TextBlock Style="{StaticResource DescriptionText}"
@@ -609,7 +619,7 @@
 
             <!-- טאב 4: התראות -->
             <TabItem Header="התראות">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10" PreviewMouseWheel="TabScrollViewer_PreviewMouseWheel">
+                <ScrollViewer x:Name="NotificationsTabScrollViewer" VerticalScrollBarVisibility="Auto" Padding="4,10">
                     <StackPanel>
                         <CheckBox x:Name="NotificationsEnabledCheckBox" Content="הפעל התראות על זמני היום" Checked="NotificationsEnabledCheckBox_CheckedChanged" Unchecked="NotificationsEnabledCheckBox_CheckedChanged" />
 
@@ -768,13 +778,15 @@
 
             <!-- טאב 5: תצוגה על שולחן העבודה -->
             <TabItem Header="שולחן עבודה">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10" PreviewMouseWheel="TabScrollViewer_PreviewMouseWheel">
+                <ScrollViewer x:Name="DesktopTabScrollViewer" VerticalScrollBarVisibility="Auto" Padding="4,10">
                     <StackPanel>
                         <CheckBox x:Name="OverlayEnabledCheckBox" Content="הצג את פרטי היום גם מעל שולחן העבודה" Checked="OverlayEnabledCheckBox_CheckedChanged" Unchecked="OverlayEnabledCheckBox_CheckedChanged" />
+                        <TextBlock Style="{StaticResource DescriptionText}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                   Text="ניתן לגרור את מיקום התצוגה על שולחן העבודה בלחיצה על Ctrl יחד עם גרירה. לחיצה על Ctrl יחד עם לחיצה ימנית פותחת תפריט הקשר (הגדרות/כיבוי/אודות)." />
 
                         <StackPanel x:Name="OverlayDetailsPanel" Margin="0,8,0,0">
                             <TextBlock Style="{StaticResource SectionHeader}" Text="מה להציג" Margin="0,0,0,4" />
-                            <CheckBox x:Name="OverlayShowDayParashaCheckBox" Content="יום בשבוע ופרשת השבוע" />
+                            <CheckBox x:Name="OverlayShowDayParashaCheckBox" Content="יום ופרשת שבוע" />
                             <CheckBox x:Name="OverlayShowHolidayCheckBox" Content="חג/מועד עברי (אם יש בתאריך הנוכחי)" />
                             <CheckBox x:Name="OverlayShowHebrewDateCheckBox" Content="תאריך עברי מלא" />
                             <CheckBox x:Name="OverlayShowGregorianDateCheckBox" Content="תאריך לועזי" />
@@ -839,7 +851,7 @@
                                 <TextBlock Style="{StaticResource SectionHeader}" Text="סדר הצגה (מה מוצג מעל מה)" Margin="0,10,0,4" />
                                 <TextBlock Style="{StaticResource DescriptionText}"
                                            Text="הפריט הראשון ברשימה מוצג למעלה. השתמשו בחיצים כדי לשנות את הסדר (פריטים שכבויים ב'מה להציג' למעלה פשוט לא יוצגו, גם אם מופיעים כאן)." />
-                                <StackPanel x:Name="OverlayOrderPanel" Margin="0,2,0,0" />
+                                <StackPanel x:Name="OverlayOrderPanel" Margin="0,2,0,0" Grid.IsSharedSizeScope="True" />
 
                                 <TextBlock Style="{StaticResource SectionHeader}" Text="שעה" Margin="0,10,0,4" />
                                 <CheckBox x:Name="OverlayTimeCustomStyleCheckBox" Content="התאמה אישית לפריט זה" Checked="OverlayItemCustomStyleCheckBox_CheckedChanged" Unchecked="OverlayItemCustomStyleCheckBox_CheckedChanged" />
@@ -855,7 +867,7 @@
                                     <controls:ColorPickerControl x:Name="OverlayTimeColorPicker" Margin="0,4,0,0" />
                                 </StackPanel>
 
-                                <TextBlock Style="{StaticResource SectionHeader}" Text="יום בשבוע ופרשת השבוע" Margin="0,10,0,4" />
+                                <TextBlock Style="{StaticResource SectionHeader}" Text="יום ופרשת שבוע" Margin="0,10,0,4" />
                                 <CheckBox x:Name="OverlayDayParashaCustomStyleCheckBox" Content="התאמה אישית לפריט זה" Checked="OverlayItemCustomStyleCheckBox_CheckedChanged" Unchecked="OverlayItemCustomStyleCheckBox_CheckedChanged" />
                                 <StackPanel x:Name="OverlayDayParashaStylePanel" Margin="18,4,0,0">
                                     <Grid>
@@ -918,7 +930,7 @@
 
             <!-- טאב 6: אודות -->
             <TabItem Header="כללי">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,10" PreviewMouseWheel="TabScrollViewer_PreviewMouseWheel">
+                <ScrollViewer x:Name="GeneralTabScrollViewer" VerticalScrollBarVisibility="Auto" Padding="4,10">
                     <StackPanel>
                         <TextBlock Style="{StaticResource SectionHeader}" Text="הפעלה אוטומטית" Margin="0,0,0,4" />
                         <CheckBox x:Name="StartWithWindowsCheckBox" Content="הפעל את התוכנה אוטומטית עם עליית Windows" />
@@ -928,6 +940,9 @@
                             <ComboBoxItem Content="בהיר" />
                             <ComboBoxItem Content="כהה" />
                         </ComboBox>
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="שחזור" Margin="0,16,0,4" />
+                        <Button x:Name="RestoreDefaultsButton" Content="שחזור ברירות מחדל" Style="{StaticResource ActionButtonStyle}" HorizontalAlignment="Left" Click="RestoreDefaultsButton_Click" />
 
                         <TextBlock Style="{StaticResource SectionHeader}" Text="עדכוני תוכנה" Margin="0,16,0,4" />
                         <CheckBox x:Name="CheckForUpdatesCheckBox" Style="{StaticResource ToggleSwitchStyle}" Content="בדוק עדכונים אוטומטית (פעם ביום, בשקט)" />

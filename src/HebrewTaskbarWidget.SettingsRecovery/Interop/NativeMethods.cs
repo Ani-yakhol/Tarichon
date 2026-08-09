@@ -231,6 +231,117 @@ namespace HebrewTaskbarWidget.Interop
         public const int WM_LBUTTONUP = 0x0202;
         public const int WM_RBUTTONDOWN = 0x0204;
         public const int WM_RBUTTONUP = 0x0205;
+        public const int WM_MOUSEWHEEL = 0x020A;
+        public const int WM_POINTERWHEEL = 0x024E;
         public const int VK_CONTROL = 0x11;
+
+        // --- קלט גולמי (Raw Input) - למגע/לוח מגע/עכבר ---
+        //
+        // רקע: ל-Windows יש הגדרה מובנית ("Scroll inactive windows when I
+        // hover over them" / registry MouseWheelRouting) שמבצעת בעצמה בדיקת-
+        // פגיעה (Hit Test) עצמאית לפי מיקום הסמן כדי להחליט לאיזה חלון
+        // לשלוח הודעת גלילה - **ללא קשר בכלל** לחלון הפעיל/הממוקד. אם
+        // בדיקת-הפגיעה הזו, מסיבה כלשהי, לא מזהה נכון את חלון פאנל
+        // ההגדרות במיקום הסמן (אבחון מפורש של המשתמש: הגלילה "עוברת דרך"
+        // לחלון אחר על שולחן העבודה, כאילו הפאנל שקוף) - שום טיפול בהודעת
+        // WM_MOUSEWHEEL/WM_POINTERWHEEL בתוך WndProc של פאנל ההגדרות לא
+        // יעזור, כי ההודעה פשוט אף פעם לא מגיעה לשם מלכתחילה.
+        //
+        // הפתרון האמיתי: קלט גולמי (Raw Input, WM_INPUT) - ערוץ קלט נפרד
+        // ונמוך-רמה יותר, שעוקף לגמרי את מנגנון ניתוב-הגלילה-לפי-מיקום-סמן
+        // שתואר למעלה. הרשמה ל-Raw Input מספקת אירועי עכבר/גלגלת ישירות
+        // מההתקן להתקן, מבוססת על מיקוד (Focus) של החלון בלבד - לא על שום
+        // בדיקת-פגיעה חיצונית שעלולה "לפספס" את החלון.
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool RegisterRawInputDevices(RAWINPUTDEVICE[] pRawInputDevices, uint uiNumDevices, uint cbSize);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern int GetRawInputData(IntPtr hRawInput, uint uiCommand, IntPtr pData, ref uint pcbSize, uint cbSizeHeader);
+
+        public const int WM_INPUT = 0x00FF;
+        public const uint RID_INPUT = 0x10000003;
+        public const uint RIM_TYPEMOUSE = 0;
+        public const ushort HID_USAGE_PAGE_GENERIC = 0x01;
+        public const ushort HID_USAGE_GENERIC_MOUSE = 0x02;
+        public const uint RIDEV_INPUTSINK = 0x00000100;
+        public const uint RIDEV_REMOVE = 0x00000001;
+        public const ushort RI_MOUSE_WHEEL = 0x0400;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RAWINPUTDEVICE
+        {
+            public ushort usUsagePage;
+            public ushort usUsage;
+            public uint dwFlags;
+            public IntPtr hwndTarget;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RAWINPUTHEADER
+        {
+            public uint dwType;
+            public uint dwSize;
+            public IntPtr hDevice;
+            public IntPtr wParam;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RAWMOUSE
+        {
+            public ushort usFlags;
+            public ushort usButtonFlags;
+            public ushort usButtonData;
+            public uint ulRawButtons;
+            public int lLastX;
+            public int lLastY;
+            public uint ulExtraInformation;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RAWINPUT
+        {
+            public RAWINPUTHEADER header;
+            public RAWMOUSE mouse;
+        }
+
+        // --- Hook עכבר גלובלי ברמה נמוכה (WH_MOUSE_LL) ---
+        //
+        // נחוץ עבור "סגור בלחיצה בכל מקום במסך" (לוח הזמנים, תפריטי הקשר) -
+        // חלק מהחלונות כאן (NOACTIVATE/AllowsTransparency/Topmost) לא תמיד
+        // מפעילים כראוי את מנגנון ה-Deactivated/Popup-dismiss הרגיל של WPF,
+        // ולחיצה על תוכנה אחרת לגמרי (לא רק חלון אחר בתוך התהליך שלנו) לא
+        // נראית כלל למנגנון הרגיל. Hook גלובלי ברמה נמוכה רואה כל לחיצת
+        // עכבר בכל תוכנה על המסך - ראו GlobalClickWatcher.
+        public delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+        public const int WH_MOUSE_LL = 14;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MSLLHOOKSTRUCT
+        {
+            public POINT pt;
+            public uint mouseData;
+            public uint flags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr WindowFromPoint(POINT point);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
+
+        public const uint GA_ROOT = 2;
     }
 }

@@ -22,10 +22,7 @@ namespace HebrewTaskbarWidget
 
         // גודל "בינוני" למצב גלילה גדולה - קטן מעט מגודל ברירת המחדל של
         // פאנל ההגדרות עצמו (480x660, ראו SettingsWindow.xaml), כדי שיהיה
-        // ברור חזותית שזו חלונית משנית ולא עוד עותק של פאנל ההגדרות. הורחב
-        // (מ-440 ל-560) כי תוכן ארוך ומובנה (כמו "מה חדש בגרסה זו", עם
-        // כותרות ורשימות-תבליטים) קריא משמעותית יותר ברוחב עמודה נוח מאשר
-        // דחוס לרוחב חלונית-הודעה רגילה וקצרה.
+        // ברור חזותית שזו חלונית משנית ולא עוד עותק של פאנל ההגדרות.
         private const double LargeModeWidth = 560.0;
         private const double LargeModeHeight = 620.0;
         private const double LargeModeScrollMaxHeight = 460.0;
@@ -57,25 +54,29 @@ namespace HebrewTaskbarWidget
                 // מצב "גלילה גדולה" (למשל "מה חדש בגרסה זו"): במקום להיפתח
                 // בגודל שמתאים בדיוק לתוכן (שעלול לצאת ענק אם רשימת השיפורים
                 // ארוכה, ואף לחרוג ממסך) - נפתחת בגודל בינוני קבוע, וה-
-                // FlowDocumentScrollViewer סביב הטקסט מקבל MaxHeight כדי שרק
-                // הוא (לא כל החלונית) יגלול את המשך התוכן שלא נכנס.
+                // ScrollViewer סביב הטקסט מקבל MaxHeight כדי שרק הוא (לא כל
+                // החלונית) יגלול את המשך התוכן שלא נכנס.
                 //
-                // התוכן עצמו מוצג דרך MessageFlowViewer (FlowDocument) ולא
-                // MessageTextBlock הרגיל - ראו BuildReleaseNotesDocument:
-                // FlowDocument תומך ב-RTL וברשימות-תבליטים כהלכה (כולל הזחה
-                // תלויה נכונה לשורות עטופות), מה ש-TextBlock פשוט לא יודע
-                // לעשות בכלל - זו הייתה הסיבה האמיתית לכך שהטקסט נראה שבור.
+                // הערה חשובה על הבחירה ב-TextBlock פשוט (לא FlowDocument):
+                // בגרסה 0.5.0 (הגרסה הראשונה שבה נוספה חלונית "מה חדש")
+                // הטקסט הוצג ביישור RTL תקין ב-MessageTextBlock פשוט הזה
+                // בדיוק (TextAlignment="Center", ירושת FlowDirection מה-
+                // Window בלבד, בלי שום תוספת). ניסיון מאוחר יותר לשפר את
+                // העיצוב (כותרות/תבליטים מסודרים) עבר ל-FlowDocumentScrollViewer
+                // - ואז יישור ה-RTL "התקלקל", למרות כמה ניסיונות תיקון שונים
+                // (TextAlignment, Language, RLM marks) שלא עזרו. לכן כאן
+                // חוזרים במפורש למנגנון המקורי המוכח - TextBlock פשוט - ובונים
+                // בו תוכן מסודר (כותרות מודגשות, תבליטים) ידנית דרך Inlines
+                // (ראו PopulateReleaseNotesInlines), במקום FlowDocument -
+                // כדי לשמר גם את הנראות המשופרת וגם את יישור ה-RTL התקין.
                 SizeToContent = SizeToContent.Width;
                 Height = LargeModeHeight;
                 RootBorder.Width = LargeModeWidth;
                 RootBorder.MaxWidth = LargeModeWidth;
+                MessageScrollViewer.MaxHeight = LargeModeScrollMaxHeight;
 
-                MessageScrollViewer.Visibility = Visibility.Collapsed;
-                MessageFlowViewer.Visibility = Visibility.Visible;
-                MessageFlowViewer.FlowDirection = FlowDirection.RightToLeft;
-                MessageFlowViewer.Language = System.Windows.Markup.XmlLanguage.GetLanguage("he-IL");
-                MessageFlowViewer.MaxHeight = LargeModeScrollMaxHeight;
-                MessageFlowViewer.Document = BuildReleaseNotesDocument(text);
+                MessageTextBlock.TextAlignment = TextAlignment.Right;
+                PopulateReleaseNotesInlines(MessageTextBlock, text);
             }
             else
             {
@@ -87,48 +88,22 @@ namespace HebrewTaskbarWidget
         }
 
         /// <summary>
-        /// בונה FlowDocument מובנה מתוך טקסט Markdown גולמי כפי שמגיע מ-GitHub
-        /// Releases - כותרות ("#"/"##"/"###"), תבליטי רשימה ("- "/"* ") הופכים
-        /// לרשימת-תבליטים אמיתית (List/ListItem, עם הזחה תלויה נכונה לשורות
-        /// עטופות - זה בדיוק מה ש-TextBlock פשוט לא ידע לעשות), ופסקאות רגילות
-        /// נשארות פסקאות. FlowDirection="RightToLeft" על המסמך כולו נותן יישור
-        /// RTL נכון ואמיתי (ולא רק "בערך", כמו שניסיון קודם עם TextBlock+RLM
-        /// marks נתן) - בלי צורך בשום תחבולה נוספת.
+        /// בונה תוכן מסודר (כותרות מודגשות בצבע הדגשה, תבליטים עם "•") מתוך
+        /// טקסט Markdown גולמי כפי שמגיע מ-GitHub Releases, ישירות לתוך
+        /// Inlines של TextBlock פשוט - ראו הערה מפורטת למה זה בכוונה לא
+        /// FlowDocument (בקונסטרוקטור למעלה). מגבלה ידועה ומקובלת: שורת
+        /// תבליט שנעטפת לשורה נוספת לא מקבלת הזחה תלויה (TextBlock פשוט לא
+        /// תומך בזה כלל) - פשרה סבירה בהחלט לטובת יישור RTL תקין ומוכח.
         /// </summary>
-        private static FlowDocument BuildReleaseNotesDocument(string rawText)
+        private static void PopulateReleaseNotesInlines(TextBlock target, string rawText)
         {
-            // Language="he-IL" (בנוסף ל-FlowDirection) - ראו התיעוד הרשמי של
-            // WPF ל-BIDI: הדוגמאות שם תמיד מציינות את שתי התכונות יחד על
-            // אותו אלמנט. בלי Language, מנוע יישור-הטקסט (Uniscribe/DirectWrite)
-            // עשוי לפתור תווים "חלשים"/ניטרליים (כמו ספרות בתוך "0.6.4",
-            // סימני פיסוק) לפי הנחת-ברירת-מחדל לא-עברית, מה שעלול לגרום
-            // להם "לברוח" למקום הלא-נכון בתוך פסקה בעברית - זה כנראה מה
-            // שנראה כמו "יישור RTL לא הושג" למרות ש-FlowDirection כשלעצמו
-            // כן הוגדר נכון. מוגדר כאן במפורש בכל רמה (מסמך, כל פסקה/רשימה/
-            // Run) ולא מוסתמך רק על ירושה - ליתר ביטחון, אחרי שתי הודעות
-            // קודמות שבהן הבעיה חזרה על עצמה. כרשת ביטחון נוספת (זולה
-            // וללא תופעות לוואי גלויות), כל שורת טקסט מקבלת גם תו RLM
-            // (Right-to-Left Mark, U+200F) בלתי-נראה בתחילתה - כדי לעגן את
-            // כיוון הבסיס של הפסקה כ-RTL באופן חד-משמעי מבחינת האלגוריתם,
-            // ולא רק דרך FlowDirection/Language שאמורים להספיק לבד.
-            const char Rlm = '\u200F';
-
-            var hebrew = System.Windows.Markup.XmlLanguage.GetLanguage("he-IL");
-
-            var document = new FlowDocument
-            {
-                FlowDirection = FlowDirection.RightToLeft,
-                Language = hebrew,
-                FontFamily = new FontFamily("Segoe UI"),
-                FontSize = 13,
-                PagePadding = new Thickness(0),
-                TextAlignment = TextAlignment.Right,
-            };
+            target.Inlines.Clear();
 
             var accentBrush = new SolidColorBrush(Color.FromRgb(0x1A, 0x5F, 0xB4));
 
             string[] lines = rawText.Replace("\r\n", "\n").Split('\n');
-            List? currentList = null;
+            bool isFirstLine = true;
+            bool previousWasBlank = false;
 
             foreach (string rawLine in lines)
             {
@@ -137,11 +112,17 @@ namespace HebrewTaskbarWidget
 
                 if (trimmedStart.Length == 0)
                 {
-                    // שורה ריקה = מפרידה בין קבוצות תבליטים/פסקאות (לא
-                    // מוסיפים כלום בעצמה - המרווח בין הבלוקים כבר מגיע
-                    // מה-Margin של כל Paragraph/List בנפרד).
-                    currentList = null;
+                    previousWasBlank = true;
                     continue;
+                }
+
+                if (!isFirstLine)
+                {
+                    target.Inlines.Add(new LineBreak());
+                    if (previousWasBlank)
+                    {
+                        target.Inlines.Add(new LineBreak());
+                    }
                 }
 
                 // כותרות Markdown ("#", "##", "###" ...)
@@ -154,65 +135,27 @@ namespace HebrewTaskbarWidget
                 if (hashCount > 0 && hashCount < trimmedStart.Length && trimmedStart[hashCount] == ' ')
                 {
                     string headingText = trimmedStart.Substring(hashCount + 1).Trim();
-                    document.Blocks.Add(new Paragraph(new Run(Rlm + headingText) { FlowDirection = FlowDirection.RightToLeft, Language = hebrew })
+                    target.Inlines.Add(new Run(headingText)
                     {
-                        FlowDirection = FlowDirection.RightToLeft,
-                        TextAlignment = TextAlignment.Right,
-                        Language = hebrew,
                         FontWeight = FontWeights.Bold,
-                        FontSize = hashCount <= 2 ? 15.5 : 13.5,
+                        FontSize = hashCount <= 2 ? 14.5 : 13,
                         Foreground = accentBrush,
-                        Margin = new Thickness(0, hashCount <= 2 ? 16 : 10, 0, 5),
                     });
-                    currentList = null;
-                    continue;
                 }
-
-                // תבליטי רשימה ("- " / "* ")
-                if (trimmedStart.StartsWith("- ", StringComparison.Ordinal) ||
-                    trimmedStart.StartsWith("* ", StringComparison.Ordinal))
+                else if (trimmedStart.StartsWith("- ", StringComparison.Ordinal) ||
+                         trimmedStart.StartsWith("* ", StringComparison.Ordinal))
                 {
                     string bulletText = trimmedStart.Substring(2).Trim();
-
-                    if (currentList is null)
-                    {
-                        currentList = new List
-                        {
-                            FlowDirection = FlowDirection.RightToLeft,
-                            Language = hebrew,
-                            MarkerStyle = TextMarkerStyle.Disc,
-                            Margin = new Thickness(0, 2, 0, 8),
-                            Padding = new Thickness(22, 0, 0, 0),
-                        };
-                        document.Blocks.Add(currentList);
-                    }
-
-                    currentList.ListItems.Add(new ListItem(new Paragraph(new Run(Rlm + bulletText) { FlowDirection = FlowDirection.RightToLeft, Language = hebrew })
-                    {
-                        FlowDirection = FlowDirection.RightToLeft,
-                        TextAlignment = TextAlignment.Right,
-                        Language = hebrew,
-                        Margin = new Thickness(0),
-                    })
-                    {
-                        FlowDirection = FlowDirection.RightToLeft,
-                        Language = hebrew,
-                    });
-                    continue;
+                    target.Inlines.Add(new Run("• " + bulletText));
+                }
+                else
+                {
+                    target.Inlines.Add(new Run(trimmedStart));
                 }
 
-                // פסקה רגילה
-                currentList = null;
-                document.Blocks.Add(new Paragraph(new Run(Rlm + trimmedStart) { FlowDirection = FlowDirection.RightToLeft, Language = hebrew })
-                {
-                    FlowDirection = FlowDirection.RightToLeft,
-                    TextAlignment = TextAlignment.Right,
-                    Language = hebrew,
-                    Margin = new Thickness(0, 2, 0, 2),
-                });
+                isFirstLine = false;
+                previousWasBlank = false;
             }
-
-            return document;
         }
 
         /// <summary>
@@ -324,11 +267,6 @@ namespace HebrewTaskbarWidget
                 MessageTextBlock.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#D6D6D8"));
                 ButtonAreaBorder.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#33FFFFFF"));
 
-                if (_isLargeScrollable)
-                {
-                    MessageFlowViewer.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#D6D6D8"));
-                }
-
                 foreach (Button btn in FindButtons())
                 {
                     if (btn.Style == (Style)FindResource("DialogButtonStyle"))
@@ -346,11 +284,6 @@ namespace HebrewTaskbarWidget
                 TitleText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1B1C1F"));
                 MessageTextBlock.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3A3B40"));
                 ButtonAreaBorder.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E4E4E6"));
-
-                if (_isLargeScrollable)
-                {
-                    MessageFlowViewer.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3A3B40"));
-                }
             }
         }
 

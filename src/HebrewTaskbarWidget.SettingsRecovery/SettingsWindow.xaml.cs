@@ -13,6 +13,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Runtime.InteropServices;
 using HebrewTaskbarWidget.Controls;
 using HebrewTaskbarWidget.Interop;
 using HebrewTaskbarWidget.Models;
@@ -156,7 +157,7 @@ namespace HebrewTaskbarWidget
         private static readonly Dictionary<string, string> OverlayItemLabels = new()
         {
             ["Time"] = "שעה",
-            ["DayParasha"] = "יום בשבוע ופרשת השבוע",
+            ["DayParasha"] = "יום ופרשת שבוע",
             ["HebrewDate"] = "תאריך עברי מלא",
             ["GregorianDate"] = "תאריך לועזי",
             ["Holiday"] = "חג/מועד עברי",
@@ -195,7 +196,7 @@ namespace HebrewTaskbarWidget
                 MainTabControl.SelectedIndex = initialTabIndex;
             }
 
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.7.0";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.7.7";
             AboutVersionText.Text = $"תאריכון - גרסה {version}";
         }
 
@@ -219,6 +220,129 @@ namespace HebrewTaskbarWidget
             int exStyle = NativeMethods.GetWindowLong(handle, NativeMethods.GWL_EXSTYLE);
             exStyle |= NativeMethods.WS_EX_LAYOUTRTL;
             NativeMethods.SetWindowLong(handle, NativeMethods.GWL_EXSTYLE, exStyle);
+
+            HwndSource.FromHwnd(handle)?.AddHook(WndProc);
+            RegisterRawInputForScroll(handle);
+
+            Closed += (_, _) => UnregisterRawInputForScroll();
+        }
+
+        /// <summary>
+        /// נרשמים ל"קלט גולמי" (Raw Input, WM_INPUT) עבור התקני עכבר - ראו
+        /// הערה מפורטת ליד ה-constants ב-NativeMethods.cs. תקציר: אבחון
+        /// מפורש של המשתמש גילה שהגלילה לא מגיעה לחלון הזה בכלל - "עוברת
+        /// דרך" לחלון אחר על שולחן העבודה - מה שמתאים בדיוק להתנהגות
+        /// המתועדת של הגדרת Windows "Scroll inactive windows when I hover
+        /// over them" (רישום MouseWheelRouting), שמבצעת בדיקת-פגיעה עצמאית
+        /// לפי מיקום הסמן כדי להחליט לאיזה חלון לשלוח את הגלילה - ולא
+        /// מזהה, מסיבה כלשהי, את החלון הזה במיקום הסמן. שום טיפול בהודעות
+        /// WM_MOUSEWHEEL/WM_POINTERWHEEL הרגילות לא יכול לעזור למצב הזה,
+        /// כי הן פשוט אף פעם לא מגיעות. קלט גולמי הוא ערוץ נפרד ונמוך-רמה
+        /// יותר שמבוסס על מיקוד (Focus) של החלון בלבד - לא על שום בדיקת-
+        /// פגיעה חיצונית - ולכן עוקף את הבעיה לגמרי, לכל התקן עכבר/לוח מגע
+        /// סטנדרטי (לא רק תיקון ממוקד למכשיר ספציפי).
+        /// </summary>
+        private static void RegisterRawInputForScroll(IntPtr handle)
+        {
+            var device = new NativeMethods.RAWINPUTDEVICE
+            {
+                usUsagePage = NativeMethods.HID_USAGE_PAGE_GENERIC,
+                usUsage = NativeMethods.HID_USAGE_GENERIC_MOUSE,
+                dwFlags = NativeMethods.RIDEV_INPUTSINK,
+                hwndTarget = handle,
+            };
+
+            NativeMethods.RegisterRawInputDevices(new[] { device }, 1, (uint)Marshal.SizeOf<NativeMethods.RAWINPUTDEVICE>());
+        }
+
+        /// <summary>מבטלת את ההרשמה לקלט גולמי בסגירת החלון - כדי לא להשאיר רישום "תקוע" מול HWND שכבר נהרס.</summary>
+        private static void UnregisterRawInputForScroll()
+        {
+            var device = new NativeMethods.RAWINPUTDEVICE
+            {
+                usUsagePage = NativeMethods.HID_USAGE_PAGE_GENERIC,
+                usUsage = NativeMethods.HID_USAGE_GENERIC_MOUSE,
+                dwFlags = NativeMethods.RIDEV_REMOVE,
+                hwndTarget = IntPtr.Zero,
+            };
+
+            NativeMethods.RegisterRawInputDevices(new[] { device }, 1, (uint)Marshal.SizeOf<NativeMethods.RAWINPUTDEVICE>());
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == NativeMethods.WM_INPUT)
+            {
+                HandleRawInputWheel(lParam);
+                // לא מסמנים handled=true - מאפשרים לעיבוד הרגיל (כולל
+                // WM_MOUSEWHEEL הנלווה שעדיין עשוי להגיע, ומטופל למטה)
+                // להמשיך כרגיל; ה-Raw Input הוא ערוץ מידע *נוסף*, לא תחליף
+                // לעיבוד ברירת המחדל של ההודעה הזו עצמה.
+            }
+            else if (msg == NativeMethods.WM_MOUSEWHEEL || msg == NativeMethods.WM_POINTERWHEEL)
+            {
+                // חשוב: **לא** קוראים כאן ל-ScrollActiveTab (רק מסמנים
+                // Handled) - כדי לא לגלול פעמיים על אותה תזוזת-גלגלת/החלקה
+                // כשגם ההודעה הרגילה הזו מגיעה בהצלחה וגם ה-Raw Input
+                // המקביל (WM_INPUT, למעלה) - הוא זה שבאמת מבצע את הגלילה
+                // בפועל בכל המקרים (גם וגם כשההודעה הזו "בורחת" לחלון אחר).
+                handled = true;
+            }
+
+            return IntPtr.Zero;
+        }
+
+        /// <summary>מפענחת הודעת WM_INPUT - אם זו תזוזת גלגלת-עכבר (כולל גלילה מדומה מלוח מגע), גוללת את הלשונית הפעילה.</summary>
+        private void HandleRawInputWheel(IntPtr lParam)
+        {
+            uint size = 0;
+            uint headerSize = (uint)Marshal.SizeOf<NativeMethods.RAWINPUTHEADER>();
+            NativeMethods.GetRawInputData(lParam, NativeMethods.RID_INPUT, IntPtr.Zero, ref size, headerSize);
+            if (size == 0)
+            {
+                return;
+            }
+
+            IntPtr buffer = Marshal.AllocHGlobal((int)size);
+            try
+            {
+                if (NativeMethods.GetRawInputData(lParam, NativeMethods.RID_INPUT, buffer, ref size, headerSize) != size)
+                {
+                    return;
+                }
+
+                var raw = Marshal.PtrToStructure<NativeMethods.RAWINPUT>(buffer);
+                if (raw.header.dwType != NativeMethods.RIM_TYPEMOUSE)
+                {
+                    return;
+                }
+
+                if ((raw.mouse.usButtonFlags & NativeMethods.RI_MOUSE_WHEEL) != 0)
+                {
+                    short rawDelta = unchecked((short)raw.mouse.usButtonData);
+                    ScrollActiveTab(rawDelta);
+                }
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buffer);
+            }
+        }
+
+        /// <summary>גוללת את ה-ScrollViewer של הלשונית הנבחרת כרגע (רק אחת מוצגת בפועל בכל רגע נתון).</summary>
+        private void ScrollActiveTab(double delta)
+        {
+            ScrollViewer? active = MainTabControl.SelectedIndex switch
+            {
+                0 => WidgetTabScrollViewer,
+                1 => ZmanimTabScrollViewer,
+                2 => NotificationsTabScrollViewer,
+                3 => DesktopTabScrollViewer,
+                4 => GeneralTabScrollViewer,
+                _ => null,
+            };
+
+            active?.ScrollToVerticalOffset(active.VerticalOffset - delta);
         }
 
         private static AppSettings CloneSettings(AppSettings source)
@@ -374,27 +498,6 @@ namespace HebrewTaskbarWidget
         /// כך שכל שאר הקוד (שמזהה "מותאם אישית" לפי אינדקס מחוץ לתחום המערך)
         /// ממשיך לעבוד בלי שינוי.
         /// </summary>
-        /// <summary>
-        /// מטפלת בגלילת עכבר/לוח-מגע בתוך לשוניות פאנל ההגדרות באופן ידני,
-        /// במקום להסתמך על הטיפול המובנה של ScrollViewer ב-WPF. הסיבה: לוחות
-        /// מגע מדוייקים (Windows Precision Touchpad, נפוצים במחשבים ניידים)
-        /// שולחים "הודעות גלילה" ברזולוציה גבוהה מאוד - delta קטן בהרבה
-        /// מה-120 הרגיל של גלגלת עכבר, בהמון אירועים תכופים - ותיעוד רשמי
-        /// של Microsoft ("Windows precision touchpad devices") מאשר שיישומים
-        /// שלא מטפלים בזה במפורש "may either over-scroll or not scroll
-        /// correctly". כאן מיישמים את הגלילה ידנית לפי e.Delta הגולמי (ולא
-        /// סתם מסמנים Handled ומקווים לטיפול המובנה) - כך שכל אירוע, קטן
-        /// כגדול, מתורגם ישירות לגלילה בפועל, ללא תלות ברזולוציית ה-delta.
-        /// </summary>
-        private void TabScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (sender is ScrollViewer scrollViewer)
-            {
-                scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - e.Delta);
-                e.Handled = true;
-            }
-        }
-
         private void BuildLocationPresetItems()
         {
             LocationPresetComboBox.Items.Clear();
@@ -1149,18 +1252,19 @@ namespace HebrewTaskbarWidget
                 string label = OverlayItemLabels.TryGetValue(key, out string? l) ? l : key;
 
                 var row = new Grid { Margin = new Thickness(0, 2, 0, 2) };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, SharedSizeGroup = "OverlayItemNameCol" });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
                 var text = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center };
                 Grid.SetColumn(text, 0);
 
-                var upButton = new Button { Content = "▲", Width = 26, Height = 22, Margin = new Thickness(2, 0, 0, 0), Tag = i, IsEnabled = i > 0 };
+                var upButton = new Button { Content = "▲", Style = (Style)FindResource("IconActionButtonStyle"), Width = 28, Height = 28, Margin = new Thickness(4, 0, 0, 0), Tag = i, IsEnabled = i > 0 };
                 upButton.Click += OverlayOrderUpButton_Click;
                 Grid.SetColumn(upButton, 1);
 
-                var downButton = new Button { Content = "▼", Width = 26, Height = 22, Margin = new Thickness(2, 0, 0, 0), Tag = i, IsEnabled = i < _workingOverlayOrder.Count - 1 };
+                var downButton = new Button { Content = "▼", Style = (Style)FindResource("IconActionButtonStyle"), Width = 28, Height = 28, Margin = new Thickness(4, 0, 0, 0), Tag = i, IsEnabled = i < _workingOverlayOrder.Count - 1 };
                 downButton.Click += OverlayOrderDownButton_Click;
                 Grid.SetColumn(downButton, 2);
 
@@ -2372,7 +2476,12 @@ namespace HebrewTaskbarWidget
             return WidgetPositionMode.CustomEdgeOffset;
         }
 
-        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        private void SaveButton_Click(object sender, RoutedEventArgs e) => SaveSettings(closeAfter: true);
+
+        /// <summary>"החל" - שומר בדיוק כמו "שמור", אך משאיר את פאנל ההגדרות פתוח (למשל כדי להמשיך לערוך הגדרות נוספות בלי להיפתח מחדש).</summary>
+        private void ApplyButton_Click(object sender, RoutedEventArgs e) => SaveSettings(closeAfter: false);
+
+        private void SaveSettings(bool closeAfter)
         {
             DateTime manualDate = ManualDatePicker.SelectedDate?.Date ?? DateTime.Today;
             TimeSpan manualTime = TimeSpan.TryParse(ManualTimeTextBox.Text, CultureInfo.InvariantCulture, out TimeSpan parsedTime) ? parsedTime : DateTime.Now.TimeOfDay;
@@ -2544,7 +2653,11 @@ namespace HebrewTaskbarWidget
 
             SettingsService.Save(s);
             StartupService.SetEnabled(s.StartWithWindows);
-            Close();
+
+            if (closeAfter)
+            {
+                Close();
+            }
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)

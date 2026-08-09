@@ -27,7 +27,7 @@
             <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
             <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Padding" Value="8,2" />
             <Setter Property="FontSize" Value="12.5" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -160,9 +160,9 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBox x:Name="CustomNameTextBox" Grid.Column="0" MinWidth="240" HorizontalAlignment="Stretch" />
+                <TextBox x:Name="CustomNameTextBox" Grid.Column="0" MinWidth="240" Height="34" VerticalContentAlignment="Center" HorizontalAlignment="Stretch" Margin="10,0,10,0" />
                 <Button x:Name="PrimaryDeleteButton" Grid.Column="1" Content="🗑" Style="{StaticResource IconActionButtonStyle}"
-                        Margin="0,0,8,0" ToolTip="מחק שורה זו (השורה הכפולה תישאר לבדה)"
+                        ToolTip="מחק שורה זו (השורה הכפולה תישאר לבדה)"
                         Visibility="Collapsed" Click="PrimaryDeleteButton_Click" />
             </Grid>
             <TextBlock x:Name="PrimaryMethodText" FontSize="11" Margin="0,6,0,0" Foreground="{StaticResource SecondaryTextBrush}" Visibility="Collapsed" />
@@ -203,8 +203,8 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBox x:Name="DuplicateNameTextBox" Grid.Column="0" MinWidth="240" HorizontalAlignment="Stretch" />
-                        <Button x:Name="DeleteDuplicateButton" Grid.Column="1" Content="🗑" Style="{StaticResource IconActionButtonStyle}" Margin="0,0,8,0" ToolTip="מחק שורה כפולה זו" Click="DeleteDuplicateButton_Click" />
+                        <TextBox x:Name="DuplicateNameTextBox" Grid.Column="0" MinWidth="240" Height="34" VerticalContentAlignment="Center" HorizontalAlignment="Stretch" Margin="10,0,10,0" />
+                        <Button x:Name="DeleteDuplicateButton" Grid.Column="1" Content="🗑" Style="{StaticResource IconActionButtonStyle}" ToolTip="מחק שורה כפולה זו" Click="DeleteDuplicateButton_Click" />
                     </Grid>
                     <TextBlock x:Name="DuplicateMethodText" FontSize="11" Margin="0,8,0,0" Foreground="{StaticResource SecondaryTextBrush}" />
                     <TextBlock x:Name="DuplicateTimeText" FontSize="11" Margin="0,3,0,0" Foreground="{StaticResource SecondaryTextBrush}" />

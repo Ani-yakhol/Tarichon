@@ -5,7 +5,7 @@
         FlowDirection="RightToLeft"
         WindowStyle="None"
         AllowsTransparency="True"
-        Background="Transparent"
+        Background="#01000000"
         ShowInTaskbar="False"
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"

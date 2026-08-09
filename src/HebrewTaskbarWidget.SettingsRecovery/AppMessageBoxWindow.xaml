@@ -115,26 +115,19 @@
                     <TextBlock x:Name="TitleText" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" TextAlignment="Center" />
                 </StackPanel>
 
-                <!-- במצב הרגיל (ברירת המחדל) ה-ScrollViewer הזה פשוט לא
-                     משפיע על כלום - בלי MaxHeight מפורש הוא גדל בדיוק כמו
-                     TextBlock רגיל, בלי פס גלילה כלל (אין גלישה להציג).
-                     רק במצב "גלילה גדולה" (ראו קוד ה-Code-Behind) מוגדר לו
-                     MaxHeight, ואז הוא הופך בפועל לאזור גלילה. -->
+                <!-- אותו ScrollViewer/TextBlock משמש גם למצב "גלילה גדולה"
+                     (למשל "מה חדש בגרסה זו") - במצב הרגיל בלי MaxHeight
+                     מפורש הוא גדל בדיוק כמו TextBlock רגיל, בלי פס גלילה
+                     כלל. במצב "גלילה גדולה" (ראו קוד ה-Code-Behind) מוגדר
+                     לו MaxHeight, ואז הוא הופך בפועל לאזור גלילה - התוכן
+                     עצמו נבנה דרך MessageTextBlock.Inlines (לא FlowDocument
+                     נפרד) - ראו הערה מפורטת ב-BuildReleaseNotesInlines
+                     להסבר למה בכוונה *לא* משתמשים ב-FlowDocument/
+                     FlowDocumentScrollViewer כאן. -->
                 <ScrollViewer x:Name="MessageScrollViewer" Margin="0,14,0,0"
                               VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <TextBlock x:Name="MessageTextBlock" TextWrapping="Wrap" TextAlignment="Center" FontSize="12.5" LineHeight="19" />
                 </ScrollViewer>
-
-                <!-- תוכן ארוך ומובנה (כמו "מה חדש בגרסה זו") מוצג דרך זה
-                     במקום ה-ScrollViewer/TextBlock הרגילים למעלה - ראו
-                     AppMessageBoxWindow.xaml.cs (largeScrollable, BuildReleaseNotesDocument).
-                     FlowDocument תומך ב-RTL וברשימות-תבליטים באופן טבעי
-                     ונכון (כולל הזחה תלויה לשורות עטופות) - בניגוד ל-
-                     TextBlock פשוט, שאין לו מושג "פסקה"/"פריט רשימה" בכלל. -->
-                <FlowDocumentScrollViewer x:Name="MessageFlowViewer" Margin="0,14,0,0"
-                                          FlowDirection="RightToLeft"
-                                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                          Visibility="Collapsed" Padding="0" />
             </StackPanel>
 
             <Border x:Name="ButtonAreaBorder" BorderThickness="0,1,0,0">

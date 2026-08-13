@@ -1,0 +1,88 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    הערה על מיקום קובץ זה: מגרסה 0.5.3, שני קבצי ה-.csproj של האפליקציה
+    (זה - הוידג'ט הראשי, ו-HebrewTaskbarWidget.SettingsRecovery.csproj -
+    כלי הגישה העצמאי להגדרות) יושבים יחד באותה תיקיית קוד מקור פיזית
+    בדיוק (במקום בשתי תיקיות נפרדות כמו קודם), כדי לבטל את הכפילות
+    המיותרת בתיקיות שנוצרה מכך ששתי התיקיות "הרגישו" כאילו הן מכילות
+    כל אחת עותק שלם של אותה אפליקציה. עדיין נוצרים כאן **שני** קבצי הרצה
+    נפרדים (HebrewTaskbarWidget.exe ו-HebrewTaskbarWidgetSettings.exe -
+    ראו הפרוייקט השני) - זהו עדיין אותו ארכיטקטורה בדיוק, רק ממוקמת
+    בתיקייה אחת. ראו גם ItemGroup בתחתית הקובץ שמוציא במפורש את קבצי
+    הפרוייקט השני מהכללה האוטומטית של פרוייקט זה.
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <AssemblyName>HebrewTaskbarWidget</AssemblyName>
+    <RootNamespace>HebrewTaskbarWidget</RootNamespace>
+
+    <!-- מספר גרסה -->
+    <Version>0.8.3</Version>
+    <AssemblyVersion>0.8.3.0</AssemblyVersion>
+    <FileVersion>0.8.3.0</FileVersion>
+    <Product>תאריכון</Product>
+    <AssemblyTitle>Tarichon - Hebrew Taskbar Widget</AssemblyTitle>
+    <Company>Tarichon Project</Company>
+
+    <!-- תמיכה נכונה ב-DPI לכל מסך בנפרד (חשוב למיקום מדוייק ליד השעון) -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- סמל התוכנה המקומפלת (קובץ ה-exe עצמו, כפי שמוצג בסייר הקבצים/קיצורי דרך) -->
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+
+    <!-- גרסת ה-Windows המינימלית הנתמכת בפועל בזמן ריצה: Windows 10 1809 ומעלה.
+         (גרסת ה-Windows SDK שכנגדה מתבצעת ההידור, 10.0.19041.0, כלולה כבר
+         במחרוזת ה-TargetFramework למעלה - אין צורך להגדירה כאן שוב.) -->
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- כלול את קובץ המניפסט בפרוייקט -->
+    <None Remove="app.manifest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- קובץ סמל האפליקציה - משמש גם כ-ApplicationIcon למעלה, וגם כ-Window.Icon
+         (Assets/app.ico) בחלונות המוצגות עם מסגרת מערכת (SettingsWindow) -->
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- תיקיית קבצי ההתראה הקולית (VoiceAnnouncements) - הכללת קובץ ההדרכה
+         כ-Content עם CopyToOutputDirectory יוצרת את התיקייה הזו אוטומטית
+         בתיקיית הפלט כבר בזמן קימפול התוכנה (ולא רק כשמריצים אותה בפעם
+         הראשונה, כפי שהיה קודם) - כך שהתיקייה מוכנה מראש להנחת קבצי שמע. -->
+    <Content Include="VoiceAnnouncements\הדרכה להתראות קוליות.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- הערה: System.Windows.Automation (UI Automation, בשימוש ב-
+       Services/TaskbarClockLocator.cs לאיתור אמין של כפתור "^" בשורת
+       המשימות) לא דורש כאן <Reference> מפורש - פרוייקט מסוג WPF SDK
+       (UseWPF=true) כבר כולל את UIAutomationClient/UIAutomationTypes
+       באופן מובנה. <Reference> מפורש שהיה כאן בעבר (הוסר) יצר הפניה
+       כפולה מול ההפניה המובנית, שגרמה לאזהרות MSB3243/MSB3245 בזמן
+       בנייה (לא לשגיאה בפועל - "Choosing ... arbitrarily" - אך מיותרת). -->
+
+  <ItemGroup>
+    <!-- קבצי הפרוייקט השני (כלי הגישה העצמאי להגדרות) יושבים באותה תיקייה
+         פיזית בדיוק - יש להוציא אותם במפורש מהכללה האוטומטית (globbing)
+         של פרוייקט זה, אחרת הם ייכללו כפליים בשני האסמבלים. -->
+    <Compile Remove="SettingsRecoveryApp.xaml.cs" />
+    <Page Remove="SettingsRecoveryApp.xaml" />
+    <None Remove="SettingsRecoveryApp.xaml" />
+    <None Remove="HebrewTaskbarWidget.SettingsRecovery.csproj" />
+  </ItemGroup>
+
+</Project>

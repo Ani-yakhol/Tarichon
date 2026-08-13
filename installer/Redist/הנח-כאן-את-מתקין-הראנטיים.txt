@@ -1,0 +1,15 @@
+תיקייה זו מיועדת לקובץ windowsdesktop-runtime-8.0-win-x64.exe (מתקין
+ה-.NET 8 Desktop Runtime הרשמי של מיקרוסופט), ורלוונטית רק אם עובדים
+במצב "הכללה מקומית" (IncludeDotNetRuntime = true בראש קובץ ה-.iss) -
+ראו הסבר מלא בקובץ Guide-Installer.md, שלב 3.
+
+אם עובדים במצב ברירת המחדל (IncludeDotNetRuntime = false), התיקייה
+הזו יכולה להישאר ריקה - היא לא בשימוש בכלל, כי ה-Runtime מורד
+אוטומטית מהאינטרנט בזמן ההתקנה במקום.
+
+יש להוריד את הקובץ מכאן:
+https://dotnet.microsoft.com/download/dotnet/8.0
+(תחת "Run desktop apps" -> Windows -> x64 -> Installer)
+
+ולהניח אותו כאן בדיוק תחת השם:
+windowsdesktop-runtime-8.0-win-x64.exe

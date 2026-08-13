@@ -1,0 +1,17 @@
+כאן יש להניח **רק** את הקובץ הבודד:
+  HebrewTaskbarWidgetSettings.exe
+
+(לא צריך את שאר קבצי ה-DLL מתיקיית הפרסום של כלי ההגדרות - הם זהים
+לגמרי לאלה שכבר מועתקים מ-App-Files, כי שני הפרוייקטים חולקים את אותה
+תשתית קוד. הסקריפט לוקח מכאן רק את קובץ ה-exe עצמו.)
+
+פקודת הפרסום (מתיקיית src של הפרוייקט):
+  dotnet publish HebrewTaskbarWidget.SettingsRecovery -c Release -r win-x64 --self-contained false
+
+לאחר הרצת הפקודה, יש להעתיק **רק** את הקובץ:
+  src\HebrewTaskbarWidget.SettingsRecovery\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\HebrewTaskbarWidgetSettings.exe
+
+לתוך התיקייה הזו (SettingsRecovery-Files).
+
+קובץ ה-README הזה עצמו לא ישפיע על ההתקנה - אפשר למחוק אותו לאחר
+שהעתקתם את הקובץ האמיתי.

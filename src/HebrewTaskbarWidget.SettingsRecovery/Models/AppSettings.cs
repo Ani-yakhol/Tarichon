@@ -56,6 +56,25 @@ namespace HebrewTaskbarWidget.Models
         Custom,
     }
 
+    /// <summary>
+    /// היכן ההודעה הצפה (ToastNotificationWindow) תוצג על המסך.
+    /// AboveWidget (ברירת המחדל) - עוקבת אחרי מיקומו האמיתי הנוכחי של
+    /// הוידג'ט על המסך, בין אם הוא נגרר למקום מותאם אישית ובין אם הוא
+    /// בהיצמדות אוטומטית לכפתור "^"; שאר האפשרויות (Center/TopLeft/וכו')
+    /// קבועות ביחס למסך כולו, בדיוק כמו OverlayPosition, ולא תלויות במיקום
+    /// הוידג'ט בכלל.
+    /// </summary>
+    public enum ToastPositionMode
+    {
+        AboveWidget,
+        Center,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight,
+        Custom,
+    }
+
     /// <summary>מתי "היום" מבחינת התאריך העברי המוצג מתקדם ליום הבא (ראו Services/HebrewDayRolloverService).</summary>
     public enum HebrewDayChangeMode
     {
@@ -464,6 +483,15 @@ namespace HebrewTaskbarWidget.Models
 
         /// <summary>רקע ההודעה הצפה - כהה (ברירת מחדל) או בהיר.</summary>
         public bool NotificationToastDarkBackground { get; set; } = true;
+
+        /// <summary>היכן ההודעה הצפה תוצג על המסך - ראו ToastPositionMode.</summary>
+        public ToastPositionMode NotificationToastPositionMode { get; set; } = ToastPositionMode.AboveWidget;
+
+        /// <summary>מרחק (בפיקסלים) מהקצה השמאלי של המסך, למיקום מותאם אישית של ההודעה הצפה - רלוונטי רק כאשר NotificationToastPositionMode = Custom.</summary>
+        public double NotificationToastCustomX { get; set; } = 100;
+
+        /// <summary>מרחק (בפיקסלים) מהקצה העליון של המסך, למיקום מותאם אישית של ההודעה הצפה - רלוונטי רק כאשר NotificationToastPositionMode = Custom.</summary>
+        public double NotificationToastCustomY { get; set; } = 100;
 
         /// <summary>האם להשמיע צליל (הגדרה כללית - חלה על כל הזמנים שאין להם צליל מיוחד משלהם).</summary>
         public bool NotificationPlaySound { get; set; } = false;

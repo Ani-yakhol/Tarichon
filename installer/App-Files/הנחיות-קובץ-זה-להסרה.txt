@@ -1,0 +1,15 @@
+כאן יש להניח את כל תוכן תיקיית הפרסום (dotnet publish) של הפרוייקט
+הראשי HebrewTaskbarWidget - כל הקבצים, כולל כל תיקיות המשנה (למשל
+VoiceAnnouncements).
+
+פקודת הפרסום (מתיקיית src של הפרוייקט):
+  dotnet publish HebrewTaskbarWidget -c Release -r win-x64 --self-contained false
+
+לאחר הרצת הפקודה, יש להעתיק את **כל תוכן** התיקייה:
+  src\HebrewTaskbarWidget\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\
+
+לתוך התיקייה הזו (App-Files), כולל את HebrewTaskbarWidget.exe עצמו.
+
+קובץ ה-README הזה עצמו לא ישפיע על ההתקנה - הוא רק כדי שהתיקייה לא
+תישאר ריקה וללא הסבר. אפשר (ואף רצוי) למחוק אותו לאחר שהעתקתם את
+הקבצים האמיתיים.

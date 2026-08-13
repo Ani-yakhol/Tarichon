@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using HebrewTaskbarWidget.Interop;
+using HebrewTaskbarWidget.Models;
 using HebrewTaskbarWidget.Services;
 
 namespace HebrewTaskbarWidget
@@ -87,7 +88,7 @@ namespace HebrewTaskbarWidget
             Opacity = 0;
             Loaded += (_, _) =>
             {
-                PositionAboveWidget();
+                PositionToast();
                 BeginStoryboard((Storyboard)FindResource("FadeInStoryboard"));
             };
 
@@ -164,44 +165,79 @@ namespace HebrewTaskbarWidget
         }
 
         /// <summary>
-        /// ממקם את חלונית ההתראה צפה מעל הוידג'ט הראשי - באותו אופן בדיוק
-        /// כמו חלונית זמני היום (ZmanimPopup.PositionAboveWidget), כדי
-        /// שהעיצוב וההתנהגות יהיו עקביים: ההתראה "צצה" ממש מעל הוידג'ט, לא
-        /// בפינת המסך. לאחר החישוב הראשוני, המיקום גם "נהדק" (Clamp) לגבולות
-        /// המסך שבו יושבת שורת המשימות - אותה טכניקה בדיוק שכבר משמשת את
+        /// ממקמת את חלונית ההתראה על המסך, לפי ההגדרה שנבחרה בלשונית
+        /// "התראות" (SettingsService.Current.NotificationToastPositionMode):
+        /// "מעל הוידג'ט" (AboveWidget, ברירת המחדל) עוקבת אחרי מיקומו
+        /// הנוכחי בפועל של הוידג'ט על המסך; שאר האפשרויות (מרכז/פינות/מותאם
+        /// אישית) קבועות ביחס למסך כולו - בדיוק כמו האפשרויות המקבילות
+        /// בלשונית "שולחן עבודה". בכל מקרה, לאחר החישוב הראשוני, המיקום גם
+        /// "נהדק" (Clamp) לגבולות המסך - אותה טכניקה בדיוק שכבר משמשת את
         /// הוידג'ט הראשי עצמו במיקום שלו (MainWindow.UpdatePosition) - כדי
-        /// שההתראה תמיד תיראה במלואה, גם אם החישוב הראשוני (למשל כשהוידג'ט
-        /// יושב ממש בקצה המסך) היה מציב חלק ממנה מחוץ לתחום הנראה.
+        /// שההתראה תמיד תיראה במלואה, בכל אחת מהאפשרויות, ולא תיחתך בשולי
+        /// המסך.
+        /// </summary>
+        private void PositionToast()
+        {
+            UpdateLayout();
+
+            double popupWidth = ActualWidth > 0 ? ActualWidth : Width;
+            double popupHeight = ActualHeight > 0 ? ActualHeight : Height;
+
+            AppSettings settings = SettingsService.Current;
+
+            (double left, double top) = settings.NotificationToastPositionMode == ToastPositionMode.AboveWidget
+                ? ComputeAboveWidgetPosition(popupWidth, popupHeight)
+                : ComputeFixedScreenPosition(settings.NotificationToastPositionMode, settings, popupWidth, popupHeight);
+
+            (Left, Top) = ClampToMonitorBounds(left, top, popupWidth, popupHeight);
+        }
+
+        /// <summary>מיקום קבוע ביחס למסך כולו (מרכז/ארבע פינות/מותאם אישית) - זהה בדיוק לחישוב המקביל של תצוגת שולחן העבודה (DesktopOverlayWindow.ApplyPosition).</summary>
+        private static (double Left, double Top) ComputeFixedScreenPosition(ToastPositionMode mode, AppSettings settings, double width, double height)
+        {
+            Rect workArea = SystemParameters.WorkArea;
+            const double margin = 16.0;
+
+            return mode switch
+            {
+                ToastPositionMode.TopLeft => (workArea.Left + margin, workArea.Top + margin),
+                ToastPositionMode.TopRight => (workArea.Right - width - margin, workArea.Top + margin),
+                ToastPositionMode.BottomLeft => (workArea.Left + margin, workArea.Bottom - height - margin),
+                ToastPositionMode.BottomRight => (workArea.Right - width - margin, workArea.Bottom - height - margin),
+                ToastPositionMode.Custom => (settings.NotificationToastCustomX, settings.NotificationToastCustomY),
+                _ => (workArea.Left + (workArea.Width - width) / 2.0, workArea.Top + (workArea.Height - height) / 2.0),
+            };
+        }
+
+        /// <summary>
+        /// מחשבת מיקום מעל הוידג'ט הראשי בפועל (מצב "מעל הוידג'ט") - באותו
+        /// אופן בדיוק כמו חלונית זמני היום (ZmanimPopup.PositionAboveWidget),
+        /// כדי שהעיצוב וההתנהגות יהיו עקביים.
         ///
         /// הערה חשובה על מציאת הוידג'ט: הפאנל הראשי נגיש דרך שני קבצי
         /// הרצה נפרדים לגמרי - התהליך הראשי (HebrewTaskbarWidget.exe) לעומת
         /// היישום העצמאי לפתיחת פאנל ההגדרות בלבד (HebrewTaskbarWidgetSettings.exe,
         /// ראו App.xaml.cs מול SettingsRecoveryApp.xaml.cs) - וכשמריצים
         /// מהיישום העצמאי, הוידג'ט (אם בכלל רץ) הוא **תהליך אחר לגמרי**,
-        /// כך שאין לו אובייקט WPF Window נגיש מתוך התהליך הנוכחי בכלל -
-        /// Application.Current.Windows/MainWindow לא יכולים לעולם למצוא
-        /// אותו משם. לכן איתור הוידג'ט נעשה ברמת מערכת ההפעלה (Win32
-        /// FindWindow לפי הכותרת הקבועה "תאריכון" + GetWindowRect) - טכניקה
-        /// שעובדת זהה בין-תהליכית וגם בתוך אותו תהליך, ומוצאת את הוידג'ט
-        /// בכל מקרה שהוא באמת מוצג על המסך (בין אם הריצה הנוכחית היא
-        /// התהליך הראשי עצמו, ובין אם זו היישום העצמאי של פאנל ההגדרות
-        /// והוידג'ט רץ ברקע בתהליך נפרד). היא גם באופן טבעי "לא מוצאת
-        /// כלום" בדיוק במקרים שבהם צריך ליפול חזרה למיקום ברירת המחדל: אם
-        /// ההגדרה לא להציג את הוידג'ט מסומנת, או שהתוכנה הראשית לא פועלת
-        /// בכלל - במקרים כאלה חלון בכותרת "תאריכון" פשוט לא קיים על המסך.
+        /// כך שאין לו אובייקט WPF Window נגיש מתוך התהליך הנוכחי בכלל.
+        /// לכן איתור הוידג'ט נעשה ברמת מערכת ההפעלה (Win32 FindWindow לפי
+        /// הכותרת הקבועה "תאריכון" + GetWindowRect) - טכניקה שעובדת זהה
+        /// בין-תהליכית וגם בתוך אותו תהליך, ומוצאת את הוידג'ט בכל מקרה
+        /// שהוא באמת מוצג על המסך, ללא קשר לתהליך שבו רצה ההתראה.
+        ///
+        /// בדיקת ההגדרה "הצג את הוידג'ט" (ShowWidget) מבוצעת **לפני** חיפוש
+        /// ה-Win32 בכוונה: אם הוידג'ט כבוי בהגדרות, החלון שלו עדיין קיים
+        /// טכנית (Visibility.Hidden - לא נהרס), ו-FindWindow עדיין עשוי
+        /// למצוא אותו למרות שהוא לא באמת מוצג על המסך; לכן מדלגים על החיפוש
+        /// כליל במקרה הזה ועוברים ישר למיקום ברירת המחדל (צמוד לכפתור "^").
         /// </summary>
-        private void PositionAboveWidget()
+        private static (double Left, double Top) ComputeAboveWidgetPosition(double popupWidth, double popupHeight)
         {
-            UpdateLayout();
-
-            double popupWidth = ActualWidth > 0 ? ActualWidth : Width;
-            double popupHeight = ActualHeight > 0 ? ActualHeight : Height;
             const double gap = 6.0;
-
             double left;
             double top;
 
-            if (TryFindLiveWidgetRect(out RECT widgetRect, out double widgetDpiScale))
+            if (SettingsService.Current.ShowWidget && TryFindLiveWidgetRect(out RECT widgetRect, out double widgetDpiScale))
             {
                 double widgetLeftDip = widgetRect.Left / widgetDpiScale;
                 double widgetTopDip = widgetRect.Top / widgetDpiScale;
@@ -238,7 +274,7 @@ namespace HebrewTaskbarWidget
                 top = workAreaFallback.Bottom - popupHeight - 16.0;
             }
 
-            (Left, Top) = ClampToMonitorBounds(left, top, popupWidth, popupHeight);
+            return (left, top);
         }
 
         /// <summary>

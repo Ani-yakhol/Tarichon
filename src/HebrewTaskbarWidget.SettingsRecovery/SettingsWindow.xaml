@@ -959,20 +959,62 @@
                             <CheckBox x:Name="DisableNotificationsOnShabbatCheckBox" Content="כבה התראות בשבתות וחגים" Margin="0,0,0,8" />
 
                             <TextBlock Style="{StaticResource SectionHeader}" Text="מה להציג (הגדרה כללית)" Margin="0,0,0,4" />
-                            <StackPanel Orientation="Horizontal">
-                                <CheckBox x:Name="NotificationShowPopupCheckBox" Content="הודעה צפה" Checked="NotificationShowPopupCheckBox_CheckedChanged" Unchecked="NotificationShowPopupCheckBox_CheckedChanged" VerticalAlignment="Center" />
-                                <TextBlock Text="," VerticalAlignment="Center" Margin="2,0,0,0" />
-                                <StackPanel x:Name="NotificationToastDurationPanel" Orientation="Horizontal" Margin="4,0,0,0">
-                                    <TextBlock Text="משך תצוגה בשניות:" VerticalAlignment="Center" />
-                                    <TextBox x:Name="NotificationToastDurationTextBox" Width="52" Margin="6,0,0,0" TextAlignment="Center" VerticalAlignment="Center" />
-                                    <TextBlock Text="רקע:" VerticalAlignment="Center" Margin="12,0,0,0" />
-                                    <ComboBox x:Name="NotificationToastBackgroundComboBox" Width="78" Margin="6,0,0,0" VerticalAlignment="Center">
+                            <CheckBox x:Name="NotificationShowPopupCheckBox" Content="הודעה צפה" Checked="NotificationShowPopupCheckBox_CheckedChanged" Unchecked="NotificationShowPopupCheckBox_CheckedChanged" />
+
+                            <!-- כותרת החלק המתקפל מוצגת רק כאשר "הודעה צפה" מסומן -
+                                 בלי הודעה צפה, אין מה להגדיר כאן (מיקום/רקע/משך
+                                 תצוגה/נודניק - כולם רלוונטיים רק להודעה צפה עצמה). -->
+                            <ToggleButton x:Name="ToastSettingsAccordionHeader" Style="{StaticResource AccordionHeaderStyle}"
+                                          Content="הגדרות הודעה צפה" Margin="0,10,0,0" Visibility="Collapsed" />
+                            <Border x:Name="ToastSettingsAccordionContent" Style="{StaticResource AccordionContentStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="היכן תצוף ההודעה:" FontSize="11" Margin="0,0,0,2" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <!-- "מעל הוידג'ט" (הפריט הראשון) הוא ברירת המחדל - ההתנהגות
+                                             הרגילה, שבה ההודעה עוקבת אחרי מיקומו הנוכחי בפועל של
+                                             הוידג'ט, בכל מקום שהוא נמצא במסך (ראו ToastNotificationWindow.PositionToast).
+                                             שאר האפשרויות זהות בדיוק לשש האפשרויות בלשונית "שולחן
+                                             עבודה" (מיקום על המסך) - מיקום קבוע ביחס למסך כולו, לא
+                                             תלוי בוידג'ט. שדות ה-X/Y (למיקום מותאם אישית) מופיעים
+                                             בהמשך אותה שורה, ומוצגים רק כשהאפשרות הזו נבחרת. -->
+                                        <ComboBox x:Name="NotificationToastPositionComboBox" HorizontalAlignment="Left" SelectionChanged="NotificationToastPositionComboBox_SelectionChanged">
+                                            <ComboBoxItem Content="מעל הוידג'ט" />
+                                            <ComboBoxItem Content="מרכז המסך" />
+                                            <ComboBoxItem Content="פינה שמאלית עליונה" />
+                                            <ComboBoxItem Content="פינה ימנית עליונה" />
+                                            <ComboBoxItem Content="פינה שמאלית תחתונה" />
+                                            <ComboBoxItem Content="פינה ימנית תחתונה" />
+                                            <ComboBoxItem Content="מיקום מותאם אישית" />
+                                        </ComboBox>
+                                        <StackPanel x:Name="NotificationToastCustomPositionPanel" Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="X:" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                            <TextBox x:Name="NotificationToastCustomXTextBox" Width="60" TextAlignment="Center" VerticalAlignment="Center" />
+                                            <TextBlock Text="Y:" VerticalAlignment="Center" Margin="10,0,4,0" />
+                                            <TextBox x:Name="NotificationToastCustomYTextBox" Width="60" TextAlignment="Center" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <TextBlock x:Name="NotificationToastCustomPositionExplanationText" Style="{StaticResource DescriptionText}" Margin="0,4,0,0" TextWrapping="Wrap" Visibility="Collapsed"
+                                               Text="ניתן להגדיר מיקום מדוייק בפיקסלים לפי מרחק מקצוות המסך: X - מרחק מהקצה השמאלי, Y - מרחק מהקצה העליון." />
+
+                                    <TextBlock Text="רקע:" FontSize="11" Margin="0,10,0,2" />
+                                    <ComboBox x:Name="NotificationToastBackgroundComboBox" Width="90" HorizontalAlignment="Left">
                                         <ComboBoxItem Content="כהה" />
                                         <ComboBoxItem Content="בהיר" />
                                     </ComboBox>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                        <TextBlock Text="משך תצוגה בשניות:" VerticalAlignment="Center" />
+                                        <TextBox x:Name="NotificationToastDurationTextBox" Width="52" Margin="6,0,0,0" TextAlignment="Center" VerticalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                        <TextBlock Text="משך הנודניק (בדקות):" VerticalAlignment="Center" />
+                                        <TextBox x:Name="SnoozeDurationMinutesTextBox" Width="50" Margin="6,0,0,0" TextAlignment="Center" VerticalAlignment="Center" />
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
-                            <CheckBox x:Name="NotificationPlaySoundCheckBox" Content="התראה קולית" Checked="NotificationPlaySoundCheckBox_CheckedChanged" Unchecked="NotificationPlaySoundCheckBox_CheckedChanged" />
+                            </Border>
+
+                            <CheckBox x:Name="NotificationPlaySoundCheckBox" Content="התראה קולית" Margin="0,10,0,0" Checked="NotificationPlaySoundCheckBox_CheckedChanged" Unchecked="NotificationPlaySoundCheckBox_CheckedChanged" />
 
                             <StackPanel x:Name="NotificationSoundDetailsPanel" Margin="18,4,0,0">
                                 <TextBlock Text="סוג ההתראה הקולית" FontSize="11" Margin="0,0,0,2" />
@@ -1003,11 +1045,6 @@
                                         <Button x:Name="NotificationBrowseSoundButton" Content="עיון..." Click="NotificationBrowseSoundButton_Click" Padding="10,2" />
                                     </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,10,0,10">
-                                <TextBlock Text="משך הנודניק (בדקות):" VerticalAlignment="Center" />
-                                <TextBox x:Name="SnoozeDurationMinutesTextBox" Width="50" Margin="6,0,0,0" TextAlignment="Center" HorizontalAlignment="Left" />
                             </StackPanel>
 
                             <TextBlock Style="{StaticResource SectionHeader}" Text="על אילו זמנים להתריע, וכמה זמן לפני" Margin="0,0,0,4" />

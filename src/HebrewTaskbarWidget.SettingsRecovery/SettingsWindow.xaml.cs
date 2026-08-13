@@ -189,6 +189,13 @@ namespace HebrewTaskbarWidget
                 OverlayPositionComboBox,
                 OverlayPositionComboBox.Items.OfType<ComboBoxItem>().Select(item => item.Content?.ToString() ?? string.Empty));
 
+            // "היכן תצוף ההודעה" (לשונית "התראות") - אותה טכניקה בדיוק, כדי
+            // שהתפריט לא ייפרש סתם לכל רוחב הפאנל למרות שכל האפשרויות
+            // קצרות יחסית.
+            FitComboBoxWidthToContent(
+                NotificationToastPositionComboBox,
+                NotificationToastPositionComboBox.Items.OfType<ComboBoxItem>().Select(item => item.Content?.ToString() ?? string.Empty));
+
             // עובדים על עותק, כדי שלחיצה על "ביטול" לא תשאיר שינויים חלקיים.
             _working = CloneSettings(SettingsService.Current);
 
@@ -210,7 +217,7 @@ namespace HebrewTaskbarWidget
                 MainTabControl.SelectedIndex = initialTabIndex;
             }
 
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.8.3";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.8.4";
             AboutVersionText.Text = $"תאריכון - גרסה {version}";
         }
 
@@ -460,6 +467,9 @@ namespace HebrewTaskbarWidget
                 NotificationToastDurationSeconds = source.NotificationToastDurationSeconds,
                 SnoozeDurationMinutes = source.SnoozeDurationMinutes,
                 NotificationToastDarkBackground = source.NotificationToastDarkBackground,
+                NotificationToastPositionMode = source.NotificationToastPositionMode,
+                NotificationToastCustomX = source.NotificationToastCustomX,
+                NotificationToastCustomY = source.NotificationToastCustomY,
                 NotificationPlaySound = source.NotificationPlaySound,
                 NotificationSoundSource = source.NotificationSoundSource,
                 NotificationFixedSoundName = source.NotificationFixedSoundName,
@@ -1251,7 +1261,12 @@ namespace HebrewTaskbarWidget
             DisableNotificationsOnShabbatCheckBox.IsChecked = s.DisableNotificationsOnShabbatAndChagim;
             NotificationsDetailsPanel.IsEnabled = s.NotificationsEnabled;
             NotificationShowPopupCheckBox.IsChecked = s.NotificationShowPopup;
-            NotificationToastDurationPanel.IsEnabled = s.NotificationShowPopup;
+            ToastSettingsAccordionHeader.Visibility = s.NotificationShowPopup ? Visibility.Visible : Visibility.Collapsed;
+            NotificationToastPositionComboBox.SelectedIndex = (int)s.NotificationToastPositionMode;
+            NotificationToastCustomPositionPanel.Visibility = s.NotificationToastPositionMode == ToastPositionMode.Custom ? Visibility.Visible : Visibility.Collapsed;
+            NotificationToastCustomPositionExplanationText.Visibility = s.NotificationToastPositionMode == ToastPositionMode.Custom ? Visibility.Visible : Visibility.Collapsed;
+            NotificationToastCustomXTextBox.Text = s.NotificationToastCustomX.ToString(CultureInfo.InvariantCulture);
+            NotificationToastCustomYTextBox.Text = s.NotificationToastCustomY.ToString(CultureInfo.InvariantCulture);
             NotificationToastDurationTextBox.Text = s.NotificationToastDurationSeconds.ToString(CultureInfo.InvariantCulture);
             SnoozeDurationMinutesTextBox.Text = s.SnoozeDurationMinutes.ToString(CultureInfo.InvariantCulture);
             NotificationToastBackgroundComboBox.SelectedIndex = s.NotificationToastDarkBackground ? 0 : 1;
@@ -1992,14 +2007,35 @@ namespace HebrewTaskbarWidget
             NotificationsDetailsPanel.IsEnabled = NotificationsEnabledCheckBox.IsChecked == true;
         }
 
+        /// <summary>
+        /// "הודעה צפה" הוא המתג שקובע אם החלק המתקפל "הגדרות הודעה צפה"
+        /// (מיקום/רקע/משך תצוגה/נודניק) מוצג בכלל - כל ההגדרות שם רלוונטיות
+        /// רק אם יש בכלל הודעה צפה. אם הכותרת נסגרת בזמן שהיא פתוחה
+        /// (המשתמש ביטל את "הודעה צפה" כשההגדרות היו גלויות) - מקפלים אותה
+        /// אוטומטית גם כן, כדי לא להשאיר תוכן פתוח ללא כותרת נגישה מעליו.
+        /// </summary>
         private void NotificationShowPopupCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
         {
-            NotificationToastDurationPanel.IsEnabled = NotificationShowPopupCheckBox.IsChecked == true;
+            bool showPopup = NotificationShowPopupCheckBox.IsChecked == true;
+            ToastSettingsAccordionHeader.Visibility = showPopup ? Visibility.Visible : Visibility.Collapsed;
+
+            if (!showPopup)
+            {
+                ToastSettingsAccordionHeader.IsChecked = false;
+            }
         }
 
         private void NotificationPlaySoundCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
         {
             NotificationSoundDetailsPanel.IsEnabled = NotificationPlaySoundCheckBox.IsChecked == true;
+        }
+
+        /// <summary>מציג/מסתיר את שדות X/Y (מיקום מותאם אישית) בשורת "היכן תצוף ההודעה", ואת טקסט ההסבר מתחתיה - בדיוק כמו התנהגות מקבילה בלשונית "שולחן עבודה".</summary>
+        private void NotificationToastPositionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            bool isCustom = NotificationToastPositionComboBox.SelectedIndex == (int)ToastPositionMode.Custom;
+            NotificationToastCustomPositionPanel.Visibility = isCustom ? Visibility.Visible : Visibility.Collapsed;
+            NotificationToastCustomPositionExplanationText.Visibility = isCustom ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void NotificationSoundSourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -2486,7 +2522,7 @@ namespace HebrewTaskbarWidget
             }
         }
 
-        /// <summary>מגדיר את שתי קבוצות האקורדיון הקיימות בפאנל - נקרא פעם אחת מהבנאי, אחרי InitializeComponent.</summary>
+        /// <summary>מגדיר את שלוש קבוצות האקורדיון הקיימות בפאנל - נקרא פעם אחת מהבנאי, אחרי InitializeComponent.</summary>
         private void ConfigureAccordionGroups()
         {
             ConfigureAccordionGroup(
@@ -2500,6 +2536,9 @@ namespace HebrewTaskbarWidget
                 (OverlayHebrewAccordionHeader, OverlayHebrewAccordionContent),
                 (OverlayGregorianAccordionHeader, OverlayGregorianAccordionContent),
                 (OverlayHolidayAccordionHeader, OverlayHolidayAccordionContent));
+
+            ConfigureAccordionGroup(
+                (ToastSettingsAccordionHeader, ToastSettingsAccordionContent));
         }
 
         /// <summary>מקפל מחדש את כל חלקי האקורדיון הפתוחים (בכל הקבוצות) - נקרא בכל מעבר לשונית, כדי לשמור על מראה נקי של פאנל ההגדרות (בקשת המשתמש: "כשיוצאים מהלשונית החלק הפתוח שוב נסגר").</summary>
@@ -2795,6 +2834,9 @@ namespace HebrewTaskbarWidget
                 NotificationToastDurationSeconds = Math.Max(1, ParseDoubleOrDefault(NotificationToastDurationTextBox.Text, 15.0)),
                 SnoozeDurationMinutes = Math.Max(1, (int)ParseDoubleOrDefault(SnoozeDurationMinutesTextBox.Text, 2)),
                 NotificationToastDarkBackground = NotificationToastBackgroundComboBox.SelectedIndex != 1,
+                NotificationToastPositionMode = (ToastPositionMode)Math.Clamp(NotificationToastPositionComboBox.SelectedIndex, 0, Enum.GetValues<ToastPositionMode>().Length - 1),
+                NotificationToastCustomX = ParseDoubleOrDefault(NotificationToastCustomXTextBox.Text, 100),
+                NotificationToastCustomY = ParseDoubleOrDefault(NotificationToastCustomYTextBox.Text, 100),
                 NotificationPlaySound = NotificationPlaySoundCheckBox.IsChecked == true,
                 NotificationSoundSource = GetSelectedNotificationSoundSource(),
                 NotificationFixedSoundName = FixedSoundKeys[Math.Clamp(NotificationFixedSoundComboBox.SelectedIndex, 0, FixedSoundKeys.Length - 1)],

@@ -102,14 +102,14 @@ namespace HebrewTaskbarWidget
             ("סידני, אוסטרליה", -33.8688, 151.2093, 3, "AUS Eastern Standard Time"),
         };
 
-        /// <summary>אינדקס לשונית "הוידג'ט" (הראשונה) - לשימוש בקפיצה ישירה אליה, למשל מ"הגדרות..." בתפריט הראשי. אם סדר הלשוניות ב-XAML משתנה, יש לעדכן כאן בהתאם.</summary>
+        // אינדקסי העמודים לפי הסדר ב-XAML - לקפיצה ישירה לעמוד מסוים (למשל מהתפריט הראשי).
         public const int WidgetTabIndex = 0;
-
-        /// <summary>אינדקס לשונית "התראות" - לשימוש בקפיצה ישירה אליה, למשל מהתפריט הראשי. אם סדר הלשוניות ב-XAML משתנה, יש לעדכן כאן בהתאם.</summary>
-        public const int NotificationsTabIndex = 2;
-
-        /// <summary>אינדקס לשונית "שולחן עבודה" - לשימוש בקפיצה ישירה אליה, למשל מתפריט ההקשר של תצוגת שולחן העבודה עצמה. אם סדר הלשוניות ב-XAML משתנה, יש לעדכן כאן בהתאם.</summary>
-        public const int DesktopTabIndex = 3;
+        public const int CalendarTabIndex = 1;
+        public const int ZmanimTabIndex = 2;
+        public const int NotificationsTabIndex = 3;
+        public const int DesktopTabIndex = 4;
+        public const int GeneralTabIndex = 5;
+        public const int AboutTabIndex = 6;
 
         /// <summary>צבע רקע קבוע למצב כהה בפאנל ההגדרות (ובחלוניות ההודעה) - לא ניתן יותר לבחירה אישית ע"י המשתמש.</summary>
         private const string DefaultDarkBackgroundHex = "#1B1C1F";
@@ -217,8 +217,10 @@ namespace HebrewTaskbarWidget
                 MainTabControl.SelectedIndex = initialTabIndex;
             }
 
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.8.4";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.9.0";
             AboutVersionText.Text = $"תאריכון - גרסה {version}";
+
+            InitializeNavigationAndSearch();
         }
 
         /// <summary>מקפיצה ללשונית מסויימת - משמש כשהפאנל כבר פתוח ורוצים לקפוץ ללשונית ספציפית (למשל "התראות" מהתפריט הראשי) בלי לפתוח מופע נוסף.</summary>
@@ -381,11 +383,13 @@ namespace HebrewTaskbarWidget
         {
             ScrollViewer? active = MainTabControl.SelectedIndex switch
             {
-                0 => WidgetTabScrollViewer,
-                1 => ZmanimTabScrollViewer,
-                2 => NotificationsTabScrollViewer,
-                3 => DesktopTabScrollViewer,
-                4 => GeneralTabScrollViewer,
+                WidgetTabIndex => WidgetTabScrollViewer,
+                CalendarTabIndex => CalendarTabScrollViewer,
+                ZmanimTabIndex => ZmanimTabScrollViewer,
+                NotificationsTabIndex => NotificationsTabScrollViewer,
+                DesktopTabIndex => DesktopTabScrollViewer,
+                GeneralTabIndex => GeneralTabScrollViewer,
+                AboutTabIndex => AboutTabScrollViewer,
                 _ => null,
             };
 
@@ -427,6 +431,7 @@ namespace HebrewTaskbarWidget
                 ShowHolidayPanel = source.ShowHolidayPanel,
                 HolidayPanelSide = source.HolidayPanelSide,
                 ShowHolidaySeparator = source.ShowHolidaySeparator,
+                Holidays = (source.Holidays ?? new HolidaySettings()).Clone(),
                 UseCustomBackgroundColor = source.UseCustomBackgroundColor,
                 WidgetBackgroundColorHex = source.WidgetBackgroundColorHex,
                 WidgetBackgroundOpacity = source.WidgetBackgroundOpacity,
@@ -1212,6 +1217,26 @@ namespace HebrewTaskbarWidget
             HebrewDayChangeSunsetRadio.IsChecked = s.HebrewDayChangeMode == HebrewDayChangeMode.AtSunset;
             HebrewDayChangeTzeitRadio.IsChecked = s.HebrewDayChangeMode == HebrewDayChangeMode.AtTzeitHakochavim;
 
+            // --- לוח עברי ומועדים ---
+            HolidaySettings holidays = s.Holidays ?? new HolidaySettings();
+            HolidayRegionComboBox.SelectedIndex = (int)holidays.Region;
+            PurimModeComboBox.SelectedIndex = (int)holidays.Purim;
+            MinhagComboBox.SelectedIndex = (int)holidays.Minhag;
+            HolidayShowFastsCheckBox.IsChecked = holidays.ShowFasts;
+            HolidayShowRoshChodeshCheckBox.IsChecked = holidays.ShowRoshChodesh;
+            HolidayShowErevChagCheckBox.IsChecked = holidays.ShowErevChag;
+            HolidayShowMinorCheckBox.IsChecked = holidays.ShowMinorHolidays;
+            HolidayShowSpecialShabbatotCheckBox.IsChecked = holidays.ShowSpecialShabbatot;
+            HolidayShowOmerCheckBox.IsChecked = holidays.ShowOmer;
+            HolidayShowMevarchimCheckBox.IsChecked = holidays.ShowShabbatMevarchim;
+            HolidayShowIsruChagCheckBox.IsChecked = holidays.ShowIsruChag;
+            HolidayShowYomKippurKatanCheckBox.IsChecked = holidays.ShowYomKippurKatan;
+            HolidayShowSelichotCheckBox.IsChecked = holidays.ShowLeilSelichot;
+            HolidayShowBehabCheckBox.IsChecked = holidays.ShowBehab;
+            HolidayShowCommunityCheckBox.IsChecked = holidays.ShowCommunityCustoms;
+            HolidayWidgetPrimaryOnlyCheckBox.IsChecked = holidays.WidgetPrimaryOnly;
+            HolidayDayNumbersCheckBox.IsChecked = holidays.ShowDayNumbers;
+
             ZmanCalculationMethodComboBox.SelectedIndex = (int)s.DefaultZmanCalculationMethod;
 
             // --- זמנים: התאמות אישיות/כפילות - נטענים *לפני* בניית הרשימה
@@ -1340,6 +1365,7 @@ namespace HebrewTaskbarWidget
             LoadOverlayItemStyle(s.OverlayHolidayStyle, OverlayHolidayCustomStyleCheckBox, OverlayHolidayStylePanel, OverlayHolidayFontFamilyTextBox, OverlayHolidayFontSizeTextBox, OverlayHolidayColorPicker);
 
             _isLoading = false;
+            RefreshHolidayPage();
         }
 
         /// <summary>מוודא שכל 5 המפתחות התקינים קיימים ברשימה בדיוק פעם אחת (מוסיף בסוף מפתחות חסרים - למשל בהגדרות שנשמרו לפני התוספת - ומתעלם ממפתחות לא-מוכרים).</summary>
@@ -1524,6 +1550,9 @@ namespace HebrewTaskbarWidget
                 ElevationTextBox.Text = elevation.ToString(CultureInfo.InvariantCulture);
                 TimeZoneTextBox.Text = timeZoneId;
             }
+
+            // מצבי "אוטומטי" בעמוד הלוח העברי תלויים במיקום.
+            RefreshHolidayPage();
         }
 
         /// <summary>
@@ -1828,6 +1857,16 @@ namespace HebrewTaskbarWidget
                 SetBrush("CheckBoxBoxBrush", "#FFFFFF");
                 SetBrush("CheckBoxBorderBrush", "#8A8B90");
                 SetBrush("CheckMarkBrush", "#1A5FB4");
+                SetBrush("AccentFillBrush", "#1A5FB4");
+                SetBrush("CardBackgroundBrush", "#FBFBFC");
+                SetBrush("CardBorderBrush", "#E3E3E6");
+                SetBrush("CardHoverBrush", "#F6F6F8");
+                SetBrush("SubtleFillBrush", "#E9E9EC");
+                SetBrush("NavSelectedBrush", "#E2E2E7");
+                SetBrush("FooterBackgroundBrush", "#EBEBEE");
+                SetBrush("InfoBarBrush", "#E7F0FB");
+                SetBrush("ScrollThumbBrush", "#8A8B90");
+                SetBrush("ScrollThumbHoverBrush", "#5B5D63");
                 return;
             }
 
@@ -1851,6 +1890,16 @@ namespace HebrewTaskbarWidget
             SetBrush("CheckBoxBoxBrush", controlBg);
             SetBrush("CheckBoxBorderBrush", "#8A8B90");
             SetBrush("CheckMarkBrush", "#9ECBFF");
+            SetBrush("AccentFillBrush", "#2F6FC2");
+            SetBrush("CardBackgroundBrush", LightenOrDarken(bg, 0.05));
+            SetBrush("CardBorderBrush", LightenOrDarken(bg, 0.13));
+            SetBrush("CardHoverBrush", LightenOrDarken(bg, 0.08));
+            SetBrush("SubtleFillBrush", LightenOrDarken(bg, 0.10));
+            SetBrush("NavSelectedBrush", LightenOrDarken(bg, 0.14));
+            SetBrush("FooterBackgroundBrush", LightenOrDarken(bg, 0.03));
+            SetBrush("InfoBarBrush", "#1E3350");
+            SetBrush("ScrollThumbBrush", "#6A6B70");
+            SetBrush("ScrollThumbHoverBrush", "#9A9BA0");
         }
 
         private void SetBrush(string resourceKey, string hex)
@@ -1905,6 +1954,7 @@ namespace HebrewTaskbarWidget
         /// </summary>
         private void ExitApplicationButton_Click(object sender, RoutedEventArgs e)
         {
+            _skipUnsavedChangesPrompt = true;
             CrossProcessSignal.BroadcastExitRequest();
             Close();
         }
@@ -2778,6 +2828,7 @@ namespace HebrewTaskbarWidget
                     : HolidaySideLeftRadio.IsChecked == true ? HolidayPanelPosition.FarLeft
                     : HolidayPanelPosition.FarRight,
                 ShowHolidaySeparator = ShowHolidaySeparatorCheckBox.IsChecked == true,
+                Holidays = ReadHolidaySettingsFromControls(),
 
                 // --- הוידג'ט: רקע ---
                 UseCustomBackgroundColor = UseCustomBackgroundCheckBox.IsChecked == true,
@@ -2895,6 +2946,7 @@ namespace HebrewTaskbarWidget
 
             SettingsService.Save(s);
             StartupService.SetEnabled(s.StartWithWindows);
+            SetUnsavedChanges(false);
 
             if (closeAfter)
             {
@@ -2930,6 +2982,7 @@ namespace HebrewTaskbarWidget
 
             _working = new AppSettings();
             LoadFromSettings(_working);
+            SetUnsavedChanges(true);
 
             if (wasReducingGap)
             {

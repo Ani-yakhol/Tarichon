@@ -16,7 +16,8 @@ Icons\
   app.ico                    <- אייקון התוכנה
   WizardSmall.png             <- תמונה קטנה שנוצרה מהאייקון, לתצוגה בפינת חלונית ההתקנה
 App-Files\                 <- כאן מניחים את קבצי הפרסום של התוכנה הראשית (ראו שלב 1)
-SettingsRecovery-Files\    <- כאן מניחים רק את HebrewTaskbarWidgetSettings.exe
+SettingsRecovery-Files\    <- כאן מניחים את קבצי HebrewTaskbarWidgetSettings.*
+build-installer.ps1        <- בונה הכל בפקודה אחת (ראו "הדרך המהירה")
 Redist\                    <- (ריקה כברירת מחדל) - למתקין ה-.NET, רק במצב "הכללה מקומית"
 Output\                    <- כאן ייווצר קובץ ה-Setup הסופי לאחר קימפול
 ```
@@ -33,6 +34,16 @@ Output\                    <- כאן ייווצר קובץ ה-Setup הסופי �
 2. **.NET 8 SDK** (להריץ `dotnet publish`) - אם כבר בניתם/הרצתם את
    הפרוייקט ב-Visual Studio, כנראה שכבר מותקן אצלכם.
 
+## הדרך המהירה: סקריפט אחד
+
+הסקריפט `build-installer.ps1` מבצע את שלבים 1 ו-4 לבד. הוא מפרסם את שני הפרוייקטים לתיקייה זמנית, לוקח את מספר הגרסה מה-csproj ומקמפל:
+
+```bash
+powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1
+```
+
+הקובץ נוצר ב-`Output\Tarichon-Setup-<גרסה>.exe`. אין צורך להעתיק ידנית לתיקיות App-Files ו-SettingsRecovery-Files.
+
 ## שלב 1: פרסום (Publish) והנחת הקבצים בתיקיות
 
 התוכנה מפורסמת במצב **תלוי-Framework** (Framework-Dependent) - כלומר
@@ -40,22 +51,22 @@ Output\                    <- כאן ייווצר קובץ ה-Setup הסופי �
 במחשב שמריץ אותו. זו הסיבה שהתקנת ה-Runtime משולבת בקובץ ההתקנה (ראו
 שלב 3 למטה).
 
-מתיקיית `src` של הפרוייקט (**לא** מתיקיית מעטפת ההתקנה), יש להריץ:
+מתיקיית `src\HebrewTaskbarWidget.SettingsRecovery` (שבה יושבים שני ה-csproj), יש להריץ:
 
 ```bash
-dotnet publish HebrewTaskbarWidget -c Release -r win-x64 --self-contained false
-dotnet publish HebrewTaskbarWidget.SettingsRecovery -c Release -r win-x64 --self-contained false
+dotnet publish HebrewTaskbarWidget.csproj -c Release -r win-x64 --self-contained false
+dotnet publish HebrewTaskbarWidget.SettingsRecovery.csproj -c Release -r win-x64 --self-contained false
 ```
 
 לאחר מכן:
 
 | מה | מאיפה | לאן |
 |---|---|---|
-| **כל** תוכן הפרסום של התוכנה הראשית | `src\HebrewTaskbarWidget\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\` (כל התיקייה, כולל תיקיות משנה) | `App-Files\` |
-| **רק** הקובץ הבודד HebrewTaskbarWidgetSettings.exe | `src\HebrewTaskbarWidget.SettingsRecovery\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\HebrewTaskbarWidgetSettings.exe` | `SettingsRecovery-Files\` |
+| **כל** תוכן הפרסום של התוכנה הראשית | `bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\` (כל התיקייה, כולל תיקיות משנה) | `App-Files\` |
+| הקבצים `HebrewTaskbarWidgetSettings.*` (exe, dll, deps.json, runtimeconfig.json) | `bin\Settings\Release\net8.0-windows10.0.19041.0\win-x64\publish\` | `SettingsRecovery-Files\` |
 
-(אין צורך להעתיק את שאר קבצי ה-DLL של כלי ההגדרות - הם זהים לגמרי
-לאלה שכבר הועתקו מ-App-Files, כי שני הפרוייקטים חולקים את אותה תשתית.)
+(ה-exe של כלי ההגדרות לא רץ בלי ה-dll וקבצי ה-json שלו. שאר ה-DLL-ים
+משותפים וכבר מגיעים מ-App-Files.)
 
 בכל אחת משתי התיקיות האלה יש קובץ טקסט עם הנחיות דומות - אפשר למחוק
 אותו אחרי שהעתקתם את הקבצים האמיתיים.
@@ -119,7 +130,7 @@ dotnet publish HebrewTaskbarWidget.SettingsRecovery -c Release -r win-x64 --self
 "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" Tarichon-Setup.iss
 ```
 
-קובץ ה-Setup הסופי ייווצר בתוך `Output\Tarichon-Setup-0.4.8.exe`
+קובץ ה-Setup הסופי ייווצר בתוך `Output\Tarichon-Setup-0.9.0.exe`
 (המספר יתעדכן אוטומטית לפי `MyAppVersion` בראש הסקריפט).
 
 ---

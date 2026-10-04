@@ -110,7 +110,7 @@
                                    Foreground="{DynamicResource PopupTertiaryTextBrush}" FontSize="10.5" VerticalAlignment="Center" />
                     </Grid>
 
-                    <TextBlock x:Name="HolidayHeaderText" HorizontalAlignment="Center" TextAlignment="Center"
+                    <TextBlock x:Name="HolidayHeaderText" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
                                Foreground="{DynamicResource PopupAccentBrush}" FontSize="10.5" Margin="0,2,0,0" Visibility="Collapsed" />
                 </StackPanel>
 

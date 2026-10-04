@@ -923,7 +923,7 @@ namespace HebrewTaskbarWidget
             // כולל מעבר יום בשקיעה אם הוגדר כך). נבדק בכל רענון (כל שנייה),
             // כדי שהתוכן יתעדכן ממילא עם חילופי יום - סדר/משבצת הילדים
             // עצמם (ApplyLineVisibilityAndOrder) מתעדכנים רק בשינוי הגדרות.
-            string? holidayName = HolidayService.GetHolidayName(hebrewDisplayDate);
+            string? holidayName = HolidayCalendar.GetDisplayText(hebrewDisplayDate, HolidayDisplayContext.Widget);
             bool showHolidayContent = settings.ShowHolidayPanel && !string.IsNullOrEmpty(holidayName);
 
             if (holidayName != _lastHolidayName)

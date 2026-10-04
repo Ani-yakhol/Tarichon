@@ -317,7 +317,7 @@ namespace HebrewTaskbarWidget
             HebrewDateHeaderText.Text = hebrewDisplay.BottomLine;
             GregorianDateHeaderText.Text = "· " + _selectedDate.ToString("dd/MM/yyyy");
 
-            string? holidayName = HolidayService.GetHolidayName(_selectedDate);
+            string? holidayName = HolidayCalendar.GetDisplayText(_selectedDate, HolidayDisplayContext.Popup);
             HolidayHeaderText.Text = holidayName ?? string.Empty;
             HolidayHeaderText.Visibility = holidayName is null ? Visibility.Collapsed : Visibility.Visible;
 

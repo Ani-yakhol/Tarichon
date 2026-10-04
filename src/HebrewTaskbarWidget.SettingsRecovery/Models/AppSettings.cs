@@ -389,6 +389,9 @@ namespace HebrewTaskbarWidget.Models
         /// <summary>האם להציג קו מפריד דק לצד חלק "חג ומועד". ברירת מחדל: כן.</summary>
         public bool ShowHolidaySeparator { get; set; } = true;
 
+        /// <summary>לוח ארץ ישראל או חו"ל, מנהג פורים, ואילו סוגי מועדים להציג - ראו Services/HolidayCalendar.</summary>
+        public HolidaySettings Holidays { get; set; } = new();
+
         // --- רקע קוביית הוידג'ט (ברירת מחדל: שקוף לגמרי, כמו קודם) ---
         public bool UseCustomBackgroundColor { get; set; } = false;
         public string WidgetBackgroundColorHex { get; set; } = "#202020";
@@ -407,7 +410,7 @@ namespace HebrewTaskbarWidget.Models
         public double ElevationMeters { get; set; } = 754;
         public string TimeZoneId { get; set; } = "Israel Standard Time";
 
-        /// <summary>כמה דקות לפני השקיעה זמן "הדלקת נרות" (מוצג רק בערבי שבת/חג רלוונטיים - ראו HolidayService.IsErevCandleLighting).</summary>
+        /// <summary>כמה דקות לפני השקיעה זמן "הדלקת נרות" (מוצג רק בערבי שבת וחג - ראו HolidayCalendar.GetCandleLighting).</summary>
         public int CandleLightingMinutesBeforeSunset { get; set; } = 40;
 
         /// <summary>
@@ -463,12 +466,8 @@ namespace HebrewTaskbarWidget.Models
         public bool NotificationsEnabled { get; set; } = false;
 
         /// <summary>
-        /// ברירת המחדל: מסומן. כשמסומן, כל ההתראות על זמני היום מושתקות
-        /// בימים שהם עצמם שבת, או אחד מהחגים שיש לפניהם זמן "הדלקת נרות"
-        /// (ראו HolidayService.IsErevCandleLighting) - כלומר לא כולל חנוכה,
-        /// פורים, ראש חודש וכדומה, שממשיכים לקבל התראות רגיל בהם. יום שישי/
-        /// ערב חג עצמו (כולל התראת "הדלקת נרות") **אינו** מושתק - רק היום
-        /// שבו כבר "בתוך" השבת/החג.
+        /// משתיק את ההתראות בשבת וביום טוב עצמם (לפי HolidayCalendar.IsShabbatOrYomTov).
+        /// ערב שבת וערב חג, כולל התראת "הדלקת נרות", לא מושתקים.
         /// </summary>
         public bool DisableNotificationsOnShabbatAndChagim { get; set; } = true;
 
@@ -538,7 +537,7 @@ namespace HebrewTaskbarWidget.Models
         public bool OverlayShowGregorianDate { get; set; } = true;
         public bool OverlayShowHebrewDate { get; set; } = true;
         public bool OverlayShowDayAndParasha { get; set; } = true;
-        /// <summary>האם להציג חג/מועד עברי (אם יש כזה בתאריך הנוכחי). לא כולל את יום הזיכרון ויום העצמאות - ראו HolidayService.</summary>
+        /// <summary>האם להציג את המועדים של היום (לפי ההגדרות ב-Holidays). ימים לאומיים לא נכללים בלוח.</summary>
         public bool OverlayShowHoliday { get; set; } = true;
         public OverlayPosition OverlayPositionMode { get; set; } = OverlayPosition.Center;
         public double OverlayCustomX { get; set; } = 100;

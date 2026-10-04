@@ -290,7 +290,7 @@ namespace HebrewTaskbarWidget
 
             DateTime hebrewDisplayDate = HebrewDayRolloverService.GetEffectiveHebrewDate(now, settings, SettingsService.BuildLocation());
             HebrewDateDisplay hebrewDisplay = HebrewDateFormatter.Format(hebrewDisplayDate);
-            string? holidayName = HolidayService.GetHolidayName(hebrewDisplayDate);
+            string? holidayName = HolidayCalendar.GetDisplayText(hebrewDisplayDate, HolidayDisplayContext.Overlay);
 
             DayParashaText.Visibility = settings.OverlayShowDayAndParasha ? Visibility.Visible : Visibility.Collapsed;
             DayParashaText.Text = hebrewDisplay.TopLine;

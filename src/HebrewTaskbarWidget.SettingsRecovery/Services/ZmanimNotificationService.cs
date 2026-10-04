@@ -52,12 +52,9 @@ namespace HebrewTaskbarWidget.Services
 
             DateTime today = AppTimeService.Today();
 
-            // "כבה התראות בשבתות וחגים" - נבדק לפי אתמול: אם אתמול היה ערב
-            // שבת/חג (עם הדלקת נרות), סימן שהיום הוא בפועל שבת/חג עצמו -
-            // ראו HolidayService.IsErevCandleLighting. שימו לב: היום שבו
-            // *מתחיל* השבת/החג (ליל שישי/ערב חג, כולל התראת הדלקת הנרות
-            // עצמה) אינו מושתק בכוונה - רק הימים שכבר "בתוך" השבת/החג.
-            if (settings.DisableNotificationsOnShabbatAndChagim && HolidayService.IsErevCandleLighting(today.AddDays(-1)))
+            // "כבה התראות בשבתות וחגים": מושתק רק היום שהוא עצמו שבת או יום טוב (כולל יום טוב שני בחו"ל).
+            // ערב שבת וערב חג, כולל התראת הדלקת הנרות, לא מושתקים.
+            if (settings.DisableNotificationsOnShabbatAndChagim && HolidayCalendar.IsShabbatOrYomTov(today))
             {
                 return;
             }

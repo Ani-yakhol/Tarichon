@@ -19,8 +19,10 @@
 ; --- הגדרות בסיסיות של התוכנה - לעדכן לפי הצורך ---
 #define MyAppName "תאריכון"
 #define MyAppNameEn "Tarichon"
-#define MyAppVersion "0.5.1"
-#define MyAppPublisher "ישראל אמיתי"
+#ifndef MyAppVersion
+  #define MyAppVersion "0.9.0"
+#endif
+#define MyAppPublisher "ישראל אמיתי ו-א.מ."
 #define MyAppURL "https://github.com/Ani-yakhol/Tarichon"
 #define MyAppExeName "HebrewTaskbarWidget.exe"
 #define MySettingsExeName "HebrewTaskbarWidgetSettings.exe"
@@ -37,9 +39,14 @@
 #define StartupArgument "--autostart"
 
 ; --- נתיבי הקבצים המקומפלים - תיקיות מקומיות בתוך תיקיית ההתקנה עצמה.
-;     יש להניח בהן את תוצאות ה-dotnet publish (ראו המדריך). ---
-#define MainFilesDir "App-Files"
-#define SettingsFilesDir "SettingsRecovery-Files"
+;     יש להניח בהן את תוצאות ה-dotnet publish (ראו המדריך).
+;     build-installer.ps1 מעביר נתיבים משלו דרך /D. ---
+#ifndef MainFilesDir
+  #define MainFilesDir "App-Files"
+#endif
+#ifndef SettingsFilesDir
+  #define SettingsFilesDir "SettingsRecovery-Files"
+#endif
 
 ; --- מצב הכללת .NET Desktop Runtime 8 x64 ---
 ; שימו לב: **לא מספיק** להניח את קובץ המתקין בתיקיית Redist - יש **גם**
@@ -52,7 +59,16 @@
 ; false = לא מכלילים אותו כלל בקובץ ההתקנה (קובץ קטן יותר) - אם ה-Runtime
 ;         חסר במחשב היעד, המשתמש יישאל בזמן ההתקנה (עם אישור מפורש) אם
 ;         להוריד אותו אוטומטית מאתר מיקרוסופט (נדרש חיבור אינטרנט אז).
-#define IncludeDotNetRuntime false
+#ifndef IncludeDotNetRuntime
+  #define IncludeDotNetRuntime false
+#endif
+
+; גרסה עם Runtime מקבלת סיומת -Full בשם הקובץ
+#if IncludeDotNetRuntime
+  #define OutputSuffix "-Full"
+#else
+  #define OutputSuffix ""
+#endif
 
 ; שם קובץ מתקין ה-.NET Desktop Runtime (משמש בשני המצבים)
 #define DotNetRuntimeFileName "windowsdesktop-runtime-8.0-win-x64.exe"
@@ -85,7 +101,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 ; --- קובץ הפלט הסופי ---
 OutputDir=Output
-OutputBaseFilename=Tarichon-Setup-{#MyAppVersion}
+OutputBaseFilename=Tarichon-Setup-{#MyAppVersion}{#OutputSuffix}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -116,11 +132,11 @@ Name: "desktopicon_settings"; Description: "יצירת קיצור דרך ל{#MyS
 
 [Files]
 ; --- כל קבצי הפרסום (publish) של התוכנה הראשית, כולל תיקיית ההתראות הקוליות ---
-Source: "{#MainFilesDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#MainFilesDir}\*"; Excludes: "*.pdb"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; --- קובץ ה-exe של כלי ההגדרות העצמאי בלבד - שאר הקבצים שלו (DLL-ים
-;     משותפים) כבר הועתקו למעלה, כי שני הפרוייקטים חולקים את אותה תשתית ---
-Source: "{#SettingsFilesDir}\{#MySettingsExeName}"; DestDir: "{app}"; Flags: ignoreversion
+; --- כלי ההגדרות העצמאי: ה-exe לבדו לא רץ, הוא צריך גם את ה-dll, ה-deps.json
+;     וה-runtimeconfig.json שלו. ה-DLL-ים המשותפים כבר הועתקו למעלה ---
+Source: "{#SettingsFilesDir}\HebrewTaskbarWidgetSettings.*"; Excludes: "*.pdb"; DestDir: "{app}"; Flags: ignoreversion
 
 ; --- מתקין ה-.NET Desktop Runtime, רק במצב "הכללה מקומית" (ראו IncludeDotNetRuntime למעלה) ---
 #if IncludeDotNetRuntime

@@ -163,15 +163,25 @@ namespace HebrewTaskbarWidget.Services
                     // לראות/להגדיר את השורה הזו, לא רק בימים שהיא רלוונטית
                     // בפועל (בניגוד לתצוגת "היום" האמיתית - הפופ-אפ/התראות,
                     // ששם עדיין רוצים לדלג עליה בימים לא-רלוונטיים).
-                    if ((forceIncludeCandleLighting || HolidayService.IsErevCandleLighting(date)) && shkia is not null)
+                    CandleLightingKind candleLighting = forceIncludeCandleLighting
+                        ? CandleLightingKind.BeforeSunset
+                        : HolidayCalendar.GetCandleLighting(date);
+
+                    if (candleLighting != CandleLightingKind.None && shkia is not null)
                     {
                         string clDisplayName = ResolveDisplayName(baseName, customizationByBase);
+
+                        // במוצאי שבת שלפני חג ובליל יום טוב שני מדליקים רק אחרי צאת הכוכבים, מאש קיימת.
+                        DateTime? clTime = candleLighting == CandleLightingKind.AfterTzeit
+                            ? ResolveZmanTime(NameTzeitHakochavim, method, graTimes, mgaTimes, shkia, tzeitHakochavimMinutesAfterSunset)
+                            : shkia.Value.AddMinutes(-Math.Max(0, candleLightingMinutesBeforeSunset));
+
                         entries.Add(new ZmanEntry
                         {
                             Key = baseName,
-                            DisplayName = clDisplayName,
+                            DisplayName = candleLighting == CandleLightingKind.AfterTzeit ? $"{clDisplayName} (מאש קיימת)" : clDisplayName,
                             VoiceKey = baseName,
-                            Time = shkia.Value.AddMinutes(-Math.Max(0, candleLightingMinutesBeforeSunset)),
+                            Time = clTime,
                         });
                     }
 
